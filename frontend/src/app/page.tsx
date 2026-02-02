@@ -1,32 +1,23 @@
-"use client";
+import React from 'react';
+import LandingNav from '@/components/landing/LandingNav';
+import HeroSection from '@/components/landing/HeroSection';
+import FeaturesSection from '@/components/landing/FeaturesSection';
+import HowItWorksSection from '@/components/landing/HowItWorksSection';
+import PricingSection from '@/components/landing/PricingSection';
+import CTASection from '@/components/landing/Ctasection';
+import LandingFooter from '@/components/landing/LandingFooter';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
-export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Redirecionar para o dashboard
-    router.push("/dashboard");
-  }, [router]);
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-4">
-          <img 
-            src="/logo.jpg" 
-            alt="Contratuz Logo" 
-            className="w-16 h-16 rounded-lg object-cover shadow-lg"
-          />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">eiDocuments</h1>
-        <p className="text-gray-600">Redirecionando para o dashboard...</p>
-        <div className="mt-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        </div>
-      </div>
-    </div>
+    <main className="min-h-screen">
+      <LandingNav />
+      <HeroSection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <PricingSection />
+      <CTASection />
+      <LandingFooter />
+    </main>
   );
 }
