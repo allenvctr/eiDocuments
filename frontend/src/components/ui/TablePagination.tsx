@@ -61,25 +61,23 @@ const TablePagination: React.FC<TablePaginationProps> = ({
   const visiblePages = totalPages > 1 ? getVisiblePages() : [];
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
+    <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
       {/* Info sobre os itens */}
       <div className="flex items-center space-x-4">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
           Mostrando {startItem}-{endItem} de {totalItems} resultados
         </div>
-        
+
         {showItemsPerPage && (
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">Itens por página:</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Itens por página:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {itemsPerPageOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <option key={option} value={option}>{option}</option>
               ))}
             </select>
           </div>
@@ -89,41 +87,37 @@ const TablePagination: React.FC<TablePaginationProps> = ({
       {/* Controles de navegação */}
       {totalPages > 1 && (
         <div className="flex items-center space-x-1">
-          {/* Primeira página */}
           <button
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Primeira página"
           >
             <ChevronsLeft className="w-4 h-4" />
           </button>
 
-          {/* Página anterior */}
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Página anterior"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {/* Números das páginas */}
           <div className="flex items-center space-x-1">
             {visiblePages.map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
-                  <span className="px-3 py-2 text-gray-400">...</span>
+                  <span className="px-3 py-2 text-gray-400 dark:text-gray-500">...</span>
                 ) : (
                   <button
                     onClick={() => onPageChange(Number(page))}
                     className={`
                       px-3 py-2 rounded text-sm font-medium transition-colors
-                      ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
+                      ${currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }
                     `}
                   >
@@ -134,21 +128,19 @@ const TablePagination: React.FC<TablePaginationProps> = ({
             ))}
           </div>
 
-          {/* Próxima página */}
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Próxima página"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
 
-          {/* Última página */}
           <button
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Última página"
           >
             <ChevronsRight className="w-4 h-4" />

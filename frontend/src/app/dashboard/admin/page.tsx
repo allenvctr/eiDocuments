@@ -269,12 +269,12 @@ const AdminDashboardPage = () => {
           <>
         {/* Header com Título e Botão de Atualizar */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard Administrativo</h1>
-              <p className="text-gray-600 mt-1">Visão geral do sistema e estatísticas</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard Administrativo</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Visão geral do sistema e estatísticas</p>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               <ModernButton
                 onClick={refetchAll}
                 disabled={loading}

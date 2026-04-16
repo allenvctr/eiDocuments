@@ -211,27 +211,27 @@ const UserDashboardPage = () => {
       <div>
         {/* Header */}
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
               <div className="flex items-center space-x-3 mb-2">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
-                  <p className="text-gray-600">Bem-vindo de volta!</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+                  <p className="text-gray-600 dark:text-gray-400">Bem-vindo de volta!</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 mt-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <p className="text-sm text-gray-600">
+              <div className="flex items-center space-x-2 mt-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">{userDepartment}</span> • Dados atualizados em tempo real
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <ModernButton 
-                variant="outline" 
+            <div className="flex flex-wrap items-center gap-2">
+              <ModernButton
+                variant="outline"
                 onClick={refetch}
                 disabled={loading}
               >
@@ -477,32 +477,32 @@ const UserDashboardPage = () => {
 
         {/* Resumo de Atividade */}
         <div className="mt-8 pt-6 border-t border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3 text-sm">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-900">{userDepartment}</p>
-                <p className="text-gray-500">Seu departamento</p>
+                <p className="font-semibold text-gray-900">{userDepartment}</p>
+                <p className="text-sm text-gray-500">Seu departamento</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 text-sm">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-green-600" />
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <FileText className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-900">{stats?.documentos?.total || 0}</p>
-                <p className="text-gray-500">Documentos total</p>
+                <p className="font-semibold text-gray-900">{stats?.documentos?.total || 0}</p>
+                <p className="text-sm text-gray-500">Documentos total</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 text-sm">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-4 h-4 text-purple-600" />
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Activity className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-900">{stats?.documentos?.ativos || 0}</p>
-                <p className="text-gray-500">Documentos ativos</p>
+                <p className="font-semibold text-gray-900">{stats?.documentos?.ativos || 0}</p>
+                <p className="text-sm text-gray-500">Documentos ativos</p>
               </div>
             </div>
           </div>

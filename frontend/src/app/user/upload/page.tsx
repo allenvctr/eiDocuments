@@ -572,29 +572,29 @@ const UploadPage = () => {
             
             <div className="space-y-3">
               {files.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-xl">{getFileIcon(file.type)}</div>
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{file.name}</p>
+                <div key={file.id} className="flex items-start sm:items-center justify-between gap-3 p-3 border border-gray-200 rounded-lg">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="text-xl flex-shrink-0">{getFileIcon(file.type)}</div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{file.name}</p>
                       <p className="text-xs text-gray-600">
                         {formatFileSize(file.size)}
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-3">
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {file.status === 'ready' && (
-                      <div className="flex items-center space-x-1 text-blue-600">
+                      <div className="flex items-center gap-1 text-blue-600">
                         <FileText className="h-4 w-4" />
-                        <span className="text-xs font-medium">Pronto</span>
+                        <span className="text-xs font-medium hidden sm:inline">Pronto</span>
                       </div>
                     )}
 
                     {file.status === 'uploading' && (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                          <div 
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-1.5">
+                          <div
                             className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                             style={{ width: `${file.progress}%` }}
                           ></div>
@@ -602,18 +602,18 @@ const UploadPage = () => {
                         <span className="text-xs text-gray-600">{file.progress}%</span>
                       </div>
                     )}
-                    
+
                     {file.status === 'success' && (
-                      <div className="flex items-center space-x-1 text-green-600">
+                      <div className="flex items-center gap-1 text-green-600">
                         <CheckCircle className="h-4 w-4" />
-                        <span className="text-xs font-medium">Enviado</span>
+                        <span className="text-xs font-medium hidden sm:inline">Enviado</span>
                       </div>
                     )}
-                    
+
                     {file.status === 'error' && (
-                      <div className="flex items-center space-x-1 text-red-600">
+                      <div className="flex items-center gap-1 text-red-600">
                         <AlertCircle className="h-4 w-4" />
-                        <span className="text-xs font-medium">Erro</span>
+                        <span className="text-xs font-medium hidden sm:inline">Erro</span>
                       </div>
                     )}
                     
