@@ -236,15 +236,15 @@ const BuscarDocumentosPage = () => {
     <UserLayout>
       <div className="space-y-6">
         {/* Header de Busca */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Buscar Documentos</h1>
-              <p className="text-gray-600">Encontre documentos por título, descrição, tags ou conteúdo</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Buscar Documentos</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Encontre documentos por título, descrição, tags ou conteúdo</p>
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="flex items-center self-start sm:self-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
               <Filter className="w-4 h-4 mr-2" />
               Filtros
@@ -252,7 +252,7 @@ const BuscarDocumentosPage = () => {
           </div>
 
           {/* Barra de Busca */}
-          <div className="flex space-x-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -262,7 +262,7 @@ const BuscarDocumentosPage = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Digite sua busca aqui..."
               />
               {searchQuery && (
@@ -270,14 +270,14 @@ const BuscarDocumentosPage = () => {
                   onClick={clearSearch}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
-                  <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  <X className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" />
                 </button>
               )}
             </div>
             <button
               onClick={handleSearch}
               disabled={!searchQuery.trim() || isSearching}
-              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSearching ? 'Buscando...' : 'Buscar'}
             </button>
@@ -285,17 +285,17 @@ const BuscarDocumentosPage = () => {
 
           {/* Filtros Avançados */}
           {showFilters && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Filtros Avançados</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Filtros Avançados</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Categoria
                   </label>
                   <select
                     value={filtros.categoria}
                     onChange={(e) => setFiltros({...filtros, categoria: e.target.value})}
-                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Todas as categorias</option>
                     {categorias.map((cat) => (
@@ -306,25 +306,25 @@ const BuscarDocumentosPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Departamento
                   </label>
                   <input
                     type="text"
                     value={user?.departamento?.nome || ''}
                     disabled
-                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                     title="Você só pode buscar documentos do seu departamento"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Tipo de Movimento
                   </label>
                   <select
                     value={filtros.tipoMovimento}
                     onChange={(e) => setFiltros({...filtros, tipoMovimento: e.target.value})}
-                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">Todos os tipos</option>
                     <option value="recebido">Recebido</option>
@@ -339,9 +339,9 @@ const BuscarDocumentosPage = () => {
 
         {/* Resultados */}
         {hasSearched && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 Resultados da Busca
                 {searchResults.length > 0 && (
                   <span className="ml-2 text-sm text-gray-500">
@@ -381,7 +381,7 @@ const BuscarDocumentosPage = () => {
 
         {/* Estado inicial */}
         {!hasSearched && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
             <Search className="mx-auto h-16 w-16 text-gray-300 mb-6" />
             <h2 className="text-xl font-medium text-gray-900 mb-3">
               Busque por documentos

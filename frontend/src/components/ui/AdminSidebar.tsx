@@ -13,160 +13,136 @@ import {
   Menu,
   X,
   LogOut,
-  Settings,
   Users,
-  BarChart3
 } from 'lucide-react';
 
 interface AdminSidebarProps {
   className?: string;
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  className = '',
+  isMobileOpen = false,
+  onMobileClose,
+}) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  // Determinar URL do dashboard baseado no role
   const dashboardHref = user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/editor';
 
-  // Itens de menu base (Dashboard)
   const baseMenuItems = [
-    {
-      title: user?.role === 'admin' ? 'Dashboard Admin' : 'Dashboard Editor',
-      icon: Home,
-      href: dashboardHref,
-      description: 'Visão geral do sistema'
-    }
+    { title: user?.role === 'admin' ? 'Dashboard Admin' : 'Dashboard Editor', icon: Home, href: dashboardHref, description: 'Visão geral do sistema' },
   ];
 
-  // Itens comuns para Editor e Admin
   const managerMenuItems = [
-    {
-      title: 'Gerenciar Documentos',
-      icon: FileText,
-      href: '/manage/documentos',
-      description: 'Gerenciar documentos'
-    },
-    {
-      title: 'Categorias',
-      icon: FolderOpen,
-      href: '/manage/categorias',
-      description: 'Gerenciar categorias'
-    },
-    {
-      title: 'Tipos de Documento',
-      icon: FileType,
-      href: '/manage/tipos',
-      description: 'Gerenciar tipos de documento'
-    }
+    { title: 'Gerenciar Documentos', icon: FileText, href: '/manage/documentos', description: 'Gerenciar documentos' },
+    { title: 'Categorias', icon: FolderOpen, href: '/manage/categorias', description: 'Gerenciar categorias' },
+    { title: 'Tipos de Documento', icon: FileType, href: '/manage/tipos', description: 'Gerenciar tipos de documento' },
   ];
 
-  // Itens exclusivos de Admin (Usuários e Departamentos)
   const adminOnlyMenuItems = [
-    {
-      title: 'Gerenciar Usuários',
-      icon: Users,
-      href: '/manage/usuarios',
-      description: 'Gerenciar usuários do sistema'
-    },
-    {
-      title: 'Departamentos',
-      icon: Building2,
-      href: '/manage/departamentos',
-      description: 'Gerenciar departamentos'
-    }
+    { title: 'Gerenciar Usuários', icon: Users, href: '/manage/usuarios', description: 'Gerenciar usuários do sistema' },
+    { title: 'Departamentos', icon: Building2, href: '/manage/departamentos', description: 'Gerenciar departamentos' },
   ];
 
-  // Item de Relatórios
-  // const reportsMenuItem = {
-  //   title: 'Relatórios',
-  //   icon: BarChart3,
-  //   href: '/manage/relatorios',
-  //   description: 'Relatórios do sistema'
-  // };
-
-  // Montar menu baseado no role do usuário
   let menuItems = baseMenuItems;
-
   if (user?.role === 'admin') {
-    // Admin vê tudo
     menuItems = [...baseMenuItems, ...managerMenuItems, ...adminOnlyMenuItems];
   } else if (user?.role === 'editor') {
-    // Editor vê apenas itens de gerenciamento (SEM Usuários e Departamentos)
     menuItems = [...baseMenuItems, ...managerMenuItems];
   }
-  // User vê apenas dashboard
 
   const isActive = (href: string) => {
-    if (href === '/dashboard/admin' || href === '/dashboard/editor') {
-      return pathname === href;
-    }
+    if (href === '/dashboard/admin' || href === '/dashboard/editor') return pathname === href;
     return pathname.startsWith(href);
   };
 
+  const handleClose = () => {
+    if (onMobileClose) onMobileClose();
+    else setIsCollapsed(true);
+  };
+
   return (
-    <div className={`
-      ${isCollapsed ? 'w-16' : 'w-64'} 
-      h-screen bg-white border-r border-gray-200 
-      transition-all duration-300 ease-in-out
-      flex flex-col
-      ${className}
-    `}>
+    <div
+      className={`
+        fixed inset-y-0 left-0 z-50 w-64
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:static lg:inset-auto lg:z-auto lg:translate-x-0
+        ${isCollapsed ? 'lg:w-16' : 'lg:w-64'}
+        h-screen
+        bg-white dark:bg-gray-900
+        border-r border-gray-200 dark:border-gray-700
+        transition-transform duration-300 ease-in-out
+        lg:transition-[width] lg:duration-300
+        flex flex-col overflow-hidden flex-shrink-0
+        ${className}
+      `}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        {!isCollapsed ? (
-          <div className="flex items-center space-x-2">
-            <img 
-              src="/logo.jpg" 
-              alt="Contratuz Logo" 
-              className="w-8 h-8 rounded-lg object-cover"
-            />
-            <span className="text-xl font-bold text-gray-800">Admin Panel</span>
-          </div>
+      <div className="flex items-center h-16 px-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        {isCollapsed ? (
+          <button
+            onClick={() => setIsCollapsed(false)}
+            className="mx-auto p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            title="Expandir menu"
+          >
+            <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <img 
-              src="/logo.jpg" 
-              alt="Contratuz Logo" 
-              className="w-8 h-8 rounded-lg object-cover"
-            />
-          </div>
+          <>
+            <img src="/logo.jpg" alt="Admin Panel" className="w-8 h-8 flex-shrink-0 rounded-lg object-cover" />
+            <span className="ml-2 flex-1 text-xl font-bold text-gray-800 dark:text-gray-100 truncate">
+              Admin Panel
+            </span>
+            <button
+              onClick={handleClose}
+              className="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              title="Fechar menu"
+            >
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </button>
+          </>
         )}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          {isCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
-        </button>
       </div>
 
-      {/* Menu Items */}
-      <nav className="flex-1 p-4 space-y-2">
+      {/* Nav Items */}
+      <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${isCollapsed ? 'px-2' : 'px-3'}`}>
         {menuItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          
+
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={onMobileClose}
+              title={isCollapsed ? item.title : undefined}
               className={`
-                flex items-center space-x-3 p-3 rounded-lg transition-colors
-                ${active 
-                  ? 'bg-red-100 text-red-700 border border-red-200' 
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                flex items-center rounded-lg transition-all duration-200 group
+                ${isCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
+                ${active
+                  ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 border border-transparent'
                 }
               `}
             >
-              <Icon className="w-5 h-5" />
+              <Icon
+                className={`
+                  w-5 h-5 flex-shrink-0
+                  ${active
+                    ? 'text-red-700 dark:text-red-400'
+                    : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                  }
+                `}
+              />
               {!isCollapsed && (
-                <>
-                  <div className="flex-1">
-                    <div className="font-medium">{item.title}</div>
-                    <div className="text-xs text-gray-400">{item.description}</div>
-                  </div>
-                </>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm leading-tight truncate">{item.title}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{item.description}</div>
+                </div>
               )}
             </Link>
           );
@@ -174,20 +150,19 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 space-y-2">
-        {/* User Info */}
+      <div className={`border-t border-gray-200 dark:border-gray-700 py-3 space-y-1 flex-shrink-0 ${isCollapsed ? 'px-2' : 'px-3'}`}>
         {!isCollapsed && user && (
-          <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg mb-2">
-            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg mb-1">
+            <div className="w-8 h-8 flex-shrink-0 bg-red-600 rounded-full flex items-center justify-center">
               <span className="text-xs font-medium text-white">
                 {user.nome?.charAt(0) || user.username?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {user.nome || user.username}
               </div>
-              <div className="text-xs text-red-500 font-medium">
+              <div className="text-xs text-red-500 dark:text-red-400 font-medium">
                 {user.role === 'admin' && 'Administrador'}
                 {user.role === 'editor' && 'Gerente'}
                 {user.role === 'user' && 'Usuário'}
@@ -195,21 +170,30 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
             </div>
           </div>
         )}
-        
-        {/* <Link
-          href="/settings"
-          className="flex items-center space-x-3 p-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          {!isCollapsed && <span>Configurações</span>}
-        </Link> */}
-        
-        <button 
+
+        {isCollapsed && user && (
+          <div
+            className="mx-auto w-9 h-9 bg-red-600 rounded-full flex items-center justify-center mb-1"
+            title={user.nome || user.username}
+          >
+            <span className="text-xs font-medium text-white">
+              {user.nome?.charAt(0) || user.username?.charAt(0) || 'U'}
+            </span>
+          </div>
+        )}
+
+        <button
           onClick={logout}
-          className="w-full flex items-center space-x-3 p-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+          title={isCollapsed ? 'Sair' : undefined}
+          className={`
+            w-full flex items-center rounded-lg
+            text-red-600 dark:text-red-400
+            hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors
+            ${isCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2'}
+          `}
         >
-          <LogOut className="w-5 h-5" />
-          {!isCollapsed && <span>Sair</span>}
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!isCollapsed && <span className="text-sm">Sair</span>}
         </button>
       </div>
     </div>

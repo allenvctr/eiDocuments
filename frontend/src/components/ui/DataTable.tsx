@@ -134,10 +134,10 @@ const DataTable = <T extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
         <div className="p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-500">Carregando...</p>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">Carregando...</p>
         </div>
       </div>
     );
@@ -145,10 +145,10 @@ const DataTable = <T extends Record<string, any>>({
 
   if (!data.length) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
         <div className="p-8 text-center">
           {typeof emptyMessage === 'string' ? (
-            <p className="text-gray-500">{emptyMessage}</p>
+            <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
           ) : (
             emptyMessage
           )}
@@ -158,17 +158,19 @@ const DataTable = <T extends Record<string, any>>({
   }
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={`
-                    px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-                    ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
+                    px-6 py-3 text-left text-xs font-medium
+                    text-gray-500 dark:text-gray-400
+                    uppercase tracking-wider
+                    ${column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800' : ''}
                     ${column.width ? column.width : ''}
                   `}
                   onClick={() => handleSort(column)}
@@ -178,14 +180,14 @@ const DataTable = <T extends Record<string, any>>({
                     {column.sortable && (
                       <div className="flex flex-col">
                         <span className={`text-xs ${
-                          sortColumn === column.key && sortDirection === 'asc' 
-                            ? 'text-blue-600' 
-                            : 'text-gray-400'
+                          sortColumn === column.key && sortDirection === 'asc'
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-gray-400 dark:text-gray-600'
                         }`}>▲</span>
                         <span className={`text-xs ${
-                          sortColumn === column.key && sortDirection === 'desc' 
-                            ? 'text-blue-600' 
-                            : 'text-gray-400'
+                          sortColumn === column.key && sortDirection === 'desc'
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-gray-400 dark:text-gray-600'
                         }`}>▼</span>
                       </div>
                     )}
@@ -193,24 +195,24 @@ const DataTable = <T extends Record<string, any>>({
                 </th>
               ))}
               {allActions.length > 0 && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Ações
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {data.map((record, index) => (
-              <tr key={index} className="hover:bg-gray-50 transition-colors">
+              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 {columns.map((column) => (
-                  <td 
-                    key={column.key} 
-                    className={`px-6 py-4 ${column.ellipsis ? '' : 'whitespace-nowrap'}`}
+                  <td
+                    key={column.key}
+                    className={`px-6 py-4 text-gray-900 dark:text-gray-100 ${column.ellipsis ? '' : 'whitespace-nowrap'}`}
                     style={column.ellipsis ? { maxWidth: column.maxWidth || '300px' } : undefined}
                   >
                     {column.ellipsis ? (
-                      <div 
-                        className="overflow-hidden text-ellipsis whitespace-nowrap" 
+                      <div
+                        className="overflow-hidden text-ellipsis whitespace-nowrap"
                         title={String(record[column.key] || '')}
                       >
                         {column.render
@@ -239,16 +241,22 @@ const DataTable = <T extends Record<string, any>>({
                             setOpenDropdown(null);
                           } else {
                             const rect = e.currentTarget.getBoundingClientRect();
-                            setDropdownPosition({
-                              x: rect.right - 192, // 192px é a largura do dropdown (w-48)
-                              y: rect.bottom + 4
-                            });
+                            const dropdownWidth = 192;
+                            const dropdownHeight = 160;
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const x = rect.right - dropdownWidth < 8
+                              ? Math.max(8, rect.left)
+                              : rect.right - dropdownWidth;
+                            const y = spaceBelow < dropdownHeight
+                              ? rect.top - dropdownHeight - 4
+                              : rect.bottom + 4;
+                            setDropdownPosition({ x, y });
                             setOpenDropdown(index);
                           }
                         }}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                       >
-                        <MoreVertical className="w-4 h-4 text-gray-400" />
+                        <MoreVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                       </button>
                     </div>
                   </td>
@@ -258,7 +266,7 @@ const DataTable = <T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
-      
+
       {/* Paginação */}
       {pagination && (
         <TablePagination
@@ -277,7 +285,7 @@ const DataTable = <T extends Record<string, any>>({
       {mounted && openDropdown !== null && createPortal(
         <div
           data-dropdown
-          className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
+          className="fixed w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999]"
           style={{
             left: dropdownPosition.x,
             top: dropdownPosition.y,
@@ -292,8 +300,11 @@ const DataTable = <T extends Record<string, any>>({
               }}
               className={`
                 w-full px-4 py-2 text-left text-sm flex items-center space-x-2
-                hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg
-                ${action.variant === 'danger' ? 'text-red-600 hover:bg-red-50' : 'text-gray-700'}
+                transition-colors first:rounded-t-lg last:rounded-b-lg
+                ${action.variant === 'danger'
+                  ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }
               `}
             >
               {action.icon}
