@@ -32,7 +32,7 @@ const CategoriasPage = () => {
 
   // Determinar filtro de departamento baseado no role
   const departmentId = user?.role === 'editor' && user?.departamento
-    ? (typeof user.departamento === 'string' ? user.departamento : user.departamento._id)
+    ? (typeof user.departamento === 'string' ? user.departamento : user.departamento!._id)
     : undefined;
 
   // Memorizar a função fetchData para evitar re-renderizações

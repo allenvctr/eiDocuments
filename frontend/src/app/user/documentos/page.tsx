@@ -36,24 +36,22 @@ const DocumentosDepartamentoPage = () => {
     baixar
   } = useDocumentos();
 
+  const userDepartmentId = user?.departamento?._id;
+
   useEffect(() => {
-    // Carregar documentos do departamento do usuário logado
-    if (user?.departamento?._id) {
-      buscarPorDepartamento(user.departamento._id);
+    if (userDepartmentId) {
+      buscarPorDepartamento(userDepartmentId);
     }
-  }, [user, buscarPorDepartamento]);
+  }, [userDepartmentId, buscarPorDepartamento]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    if (!query.trim() && user?.departamento?._id) {
-      // Se não há busca, volta a mostrar documentos do departamento
-      buscarPorDepartamento(user.departamento._id);
+    if (!userDepartmentId) return;
+    if (!query.trim()) {
+      buscarPorDepartamento(userDepartmentId);
       return;
     }
-    // Busca por texto mas ainda filtrando pelo departamento
-    if (user?.departamento?._id) {
-      buscarPorDepartamento(user.departamento._id, { q: query });
-    }
+    buscarPorDepartamento(userDepartmentId, { q: query });
   };
 
   const handleDownload = async (documento: Documento) => {
@@ -123,8 +121,8 @@ const DocumentosDepartamentoPage = () => {
       await DocumentosService.atualizar(documento._id, updateData);
       
       // Recarregar documentos do departamento
-      if (user?.departamento?._id) {
-        buscarPorDepartamento(user.departamento._id);
+      if (userDepartmentId) {
+        buscarPorDepartamento(userDepartmentId);
       }
     } catch (error) {
       console.error('Erro ao salvar documento:', error);

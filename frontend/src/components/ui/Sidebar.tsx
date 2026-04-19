@@ -30,13 +30,15 @@ const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
+  const isAdminRole = user?.role === 'superadmin' || user?.role === 'org_admin' || user?.role === 'admin';
+
   // Área do Usuário
   const userMenuItems = [
     {
       title: 'Dashboard',
       icon: Home,
-      href: '/dashboard/user',
-      description: 'Visão geral do departamento'
+      href: isAdminRole ? '/dashboard/admin' : '/dashboard/user',
+      description: isAdminRole ? 'Visão geral do sistema' : 'Visão geral do departamento'
     },
     {
       title: 'Documentos do Departamento',
@@ -135,14 +137,12 @@ const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
   // Determinar menu baseado no role único do usuário autenticado
   let menuItems = userMenuItems;
   
-  if (user?.role === 'admin') {
-    // Admin vê tudo: área de usuário + área admin completa
+  if (isAdminRole) {
     menuItems = [...userMenuItems, ...adminOnlyMenuItems];
   } else if (user?.role === 'editor') {
-    // Editor vê: área de usuário + área de gerenciamento limitada (sem usuários e departamentos)
     menuItems = [...userMenuItems, ...editorMenuItems];
   }
-  // User vê apenas userMenuItems (já definido acima)
+  // user vê apenas userMenuItems (já definido acima)
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {

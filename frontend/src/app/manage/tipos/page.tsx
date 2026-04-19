@@ -83,8 +83,8 @@ const TiposPage = () => {
     console.log('🔍 Tipos fetchData - sanitizedParams:', sanitizedParams);
 
     // Se for editor OU se admin filtrou por departamento específico, usar endpoint de departamento
-    const departamentoId = !isAdmin() && user?.departamento?._id 
-      ? user.departamento._id 
+    const departamentoId = !isAdmin() && user?.departamento?._id
+      ? user.departamento!._id
       : sanitizedParams.departamento;
 
     if (departamentoId) {
@@ -125,7 +125,7 @@ const TiposPage = () => {
           setCategoriasLoaded(true);
         } else if (user?.departamento?._id) {
           // Editor carrega categorias do seu departamento
-          await carregarCategoriasPorDep(user.departamento._id, true);
+          await carregarCategoriasPorDep(user.departamento!._id, true);
           setCategoriasLoaded(true);
         }
       } catch (error) {

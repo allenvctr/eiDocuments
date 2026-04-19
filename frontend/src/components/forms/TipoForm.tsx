@@ -44,7 +44,7 @@ const TipoForm: React.FC<TipoFormProps> = ({
         carregarCategorias({ ativo: true });
       } else if (user?.departamento?._id) {
         // Editor/User vê apenas categorias do seu departamento
-        await carregarPorDepartamento(user.departamento._id, true);
+        await carregarPorDepartamento(user.departamento!._id, true);
       }
     };
     

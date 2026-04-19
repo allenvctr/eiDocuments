@@ -113,7 +113,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
         
         // Para editores, carregar categorias do departamento
         if (!isAdmin() && user?.departamento?._id) {
-          loadCategorias(user.departamento._id);
+          loadCategorias(user.departamento!._id);
         }
       }
       setErrors({});
@@ -125,7 +125,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
       const depsData = isAdmin() 
         ? await obterDepartamentos() 
         : user?.departamento?._id 
-          ? [{ value: user.departamento._id, label: user.departamento.nome || 'Meu Departamento' }]
+          ? [{ value: user.departamento!._id, label: user.departamento!.nome || 'Meu Departamento' }]
           : [];
       
       setDepartamentos(depsData);

@@ -412,16 +412,22 @@ const UploadPage = () => {
     setIsUploading(true);
 
     try {
+      if (!userDepartmentId) {
+        error("Departamento não identificado. Contacte o administrador.");
+        setIsUploading(false);
+        return;
+      }
+
       console.log('🚀 Iniciando upload real para o backend');
       console.log('👤 Usuário:', user._id);
-      console.log('🏢 Departamento:', user.departamento._id);
-      
+      console.log('🏢 Departamento:', userDepartmentId);
+
       // Upload real para cada arquivo
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
+
         // Marcar como upload iniciado
-        setFiles(prev => prev.map(f => 
+        setFiles(prev => prev.map(f =>
           f.id === file.id ? { ...f, status: 'uploading' as const, progress: 20 } : f
         ));
 
@@ -431,7 +437,7 @@ const UploadPage = () => {
           descricao: formData.descricao,
           categoria: formData.categoria,
           ...(formData.tipo && { tipo: formData.tipo }), // Apenas incluir se houver tipo
-          departamento: user.departamento._id,
+          departamento: userDepartmentId,
           usuario: user._id,
           tipoMovimento: formData.tipoMovimento,
           remetente: formData.remetente,

@@ -27,13 +27,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
+  const isAdminRole = user?.role === 'superadmin' || user?.role === 'org_admin' || user?.role === 'admin';
+
   // Determinar URL do dashboard baseado no role
-  const dashboardHref = user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/editor';
+  const dashboardHref = isAdminRole ? '/dashboard/admin' : '/dashboard/editor';
 
   // Itens de menu base (Dashboard)
   const baseMenuItems = [
     {
-      title: user?.role === 'admin' ? 'Dashboard Admin' : 'Dashboard Editor',
+      title: isAdminRole ? 'Dashboard Admin' : 'Dashboard Editor',
       icon: Home,
       href: dashboardHref,
       description: 'Visão geral do sistema'
@@ -89,14 +91,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
   // Montar menu baseado no role do usuário
   let menuItems = baseMenuItems;
 
-  if (user?.role === 'admin') {
-    // Admin vê tudo
+  if (isAdminRole) {
     menuItems = [...baseMenuItems, ...managerMenuItems, ...adminOnlyMenuItems];
   } else if (user?.role === 'editor') {
-    // Editor vê apenas itens de gerenciamento (SEM Usuários e Departamentos)
     menuItems = [...baseMenuItems, ...managerMenuItems];
   }
-  // User vê apenas dashboard
 
   const isActive = (href: string) => {
     if (href === '/dashboard/admin' || href === '/dashboard/editor') {
@@ -188,9 +187,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ className = '' }) => {
                 {user.nome || user.username}
               </div>
               <div className="text-xs text-red-500 font-medium">
+                {user.role === 'superadmin' && 'Super Admin'}
+                {user.role === 'org_admin' && 'Org Admin'}
                 {user.role === 'admin' && 'Administrador'}
                 {user.role === 'editor' && 'Gerente'}
-                {user.role === 'user' && 'Usuário'}
+                {user.role === 'user' && 'Utilizador'}
               </div>
             </div>
           </div>

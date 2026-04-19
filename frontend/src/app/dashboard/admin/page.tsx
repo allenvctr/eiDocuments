@@ -61,8 +61,9 @@ const AdminDashboardPage = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Editor vê apenas estatísticas do seu departamento
-  const myDepartmentStats = useMyDepartmentStats();
+  // Editor vê apenas estatísticas do seu departamento.
+  // Desactivar para roles sem departamento (admin, org_admin, superadmin).
+  const myDepartmentStats = useMyDepartmentStats(!!user?.departamento);
   
   // Admin vê estatísticas globais
   const adminDashboardStats = useDashboardStats();
@@ -84,7 +85,7 @@ const AdminDashboardPage = () => {
         },
         distribuicoes: {
           porDepartamento: user?.departamento ? [{
-            nome: user.departamento.nome,
+            nome: user?.departamento?.nome,
             quantidade: myDepartmentStats.data.documentos?.total || 0
           }] : [],
           porTipo: myDepartmentStats.data.documentos?.porTipo || [],
@@ -108,7 +109,7 @@ const AdminDashboardPage = () => {
         },
         distribuicoes: {
           porDepartamento: user?.departamento ? [{
-            departamento: user.departamento.nome,
+            departamento: user?.departamento?.nome,
             quantidade: myDepartmentStats.data.documentos?.total || 0
           }] : [],
           porCategoria: myDepartmentStats.data.documentos?.porCategoria || [],
@@ -133,15 +134,15 @@ const AdminDashboardPage = () => {
         },
         distribuicoes: {
           categorias: user?.departamento ? [{
-            departamento: user.departamento.nome,
+            departamento: user?.departamento?.nome,
             quantidade: myDepartmentStats.data.documentos?.porCategoria?.length || 0
           }] : [],
           usuarios: user?.departamento ? [{
-            departamento: user.departamento.nome,
+            departamento: user?.departamento?.nome,
             quantidade: 0
           }] : [],
           documentos: user?.departamento ? [{
-            departamento: user.departamento.nome,
+            departamento: user?.departamento?.nome,
             quantidade: myDepartmentStats.data.documentos?.total || 0
           }] : []
         }

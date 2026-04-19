@@ -19,13 +19,15 @@ interface UseStatsState<T> {
 // Hook genérico para estatísticas
 function useStatsQuery<T>(
   queryFn: () => Promise<T>,
-  deps: any[] = []
+  deps: any[] = [],
+  enabled: boolean = true
 ): UseStatsState<T> {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
+    if (!enabled) return;
     try {
       setLoading(true);
       setError(null);
@@ -40,8 +42,10 @@ function useStatsQuery<T>(
   };
 
   useEffect(() => {
-    fetchData();
-  }, deps);
+    if (enabled) fetchData();
+    else setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, enabled]);
 
   return {
     data,
@@ -74,9 +78,10 @@ export function useSingleDepartmentStats(departmentId: string): UseStatsState<Si
   );
 }
 
-// Hook para estatísticas do próprio departamento do usuário logado
-export function useMyDepartmentStats(): UseStatsState<SingleDepartmentStats> {
-  return useStatsQuery(() => statsService.getMyDepartmentStats());
+// Hook para estatísticas do próprio departamento do usuário logado.
+// Passa enabled=false quando o utilizador não tem departamento (admin, org_admin, superadmin).
+export function useMyDepartmentStats(enabled: boolean = true): UseStatsState<SingleDepartmentStats> {
+  return useStatsQuery(() => statsService.getMyDepartmentStats(), [], enabled);
 }
 
 // Hook para estatísticas de usuários

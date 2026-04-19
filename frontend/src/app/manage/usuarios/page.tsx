@@ -99,26 +99,36 @@ const UsuariosPage = () => {
     setSelectedUsuario(null);
   };
 
-  const getRoleBadge = (role: 'admin' | 'editor' | 'user') => {
-    const roleMap: Record<'admin' | 'editor' | 'user', { label: string; class: string; icon: React.ReactNode }> = {
-      admin: { 
-        label: 'Administrador', 
+  const getRoleBadge = (role: string) => {
+    const roleMap: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
+      superadmin: {
+        label: 'Super Admin',
+        class: 'bg-purple-100 text-purple-800',
+        icon: <Shield className="w-3 h-3" />
+      },
+      org_admin: {
+        label: 'Org Admin',
+        class: 'bg-orange-100 text-orange-800',
+        icon: <Shield className="w-3 h-3" />
+      },
+      admin: {
+        label: 'Administrador',
         class: 'bg-red-100 text-red-800',
         icon: <Shield className="w-3 h-3" />
       },
-      editor: { 
-        label: 'Editor (Gerente)', 
+      editor: {
+        label: 'Editor',
         class: 'bg-blue-100 text-blue-800',
         icon: <Users className="w-3 h-3" />
       },
-      user: { 
-        label: 'Usuário', 
+      user: {
+        label: 'Utilizador',
         class: 'bg-gray-100 text-gray-800',
         icon: <User className="w-3 h-3" />
       },
     };
-    
-    const roleInfo = roleMap[role] || roleMap.user;
+
+    const roleInfo = roleMap[role] ?? roleMap.user;
     return (
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${roleInfo.class}`}>
         {roleInfo.icon}
@@ -166,7 +176,7 @@ const UsuariosPage = () => {
       title: 'Função',
       sortable: true,
       width: 'w-40',
-      render: (value) => getRoleBadge(value as 'admin' | 'editor' | 'user'),
+      render: (value) => getRoleBadge(value as string),
     },
     {
       key: 'dataCriacao',
