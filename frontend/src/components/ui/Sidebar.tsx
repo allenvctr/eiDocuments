@@ -35,12 +35,40 @@ const Sidebar: React.FC<SidebarProps> = ({
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
+  const isAdminRole = user?.role === 'superadmin' || user?.role === 'org_admin' || user?.role === 'admin';
+
+  // Área do Usuário
   const userMenuItems = [
-    { title: 'Dashboard', icon: Home, href: '/dashboard/user', description: 'Visão geral do departamento' },
-    { title: 'Documentos do Departamento', icon: Building2, href: '/user/documentos', description: 'Ver documentos do seu departamento' },
-    { title: 'Meus Documentos', icon: FolderOpen, href: '/user/meus-documentos', description: 'Documentos que você criou' },
-    { title: 'Buscar Documentos', icon: Search, href: '/user/buscar', description: 'Pesquisar em todos os documentos' },
-    { title: 'Upload de Documento', icon: Upload, href: '/user/upload', description: 'Enviar novo documento' },
+    {
+      title: 'Dashboard',
+      icon: Home,
+      href: isAdminRole ? '/dashboard/admin' : '/dashboard/user',
+      description: isAdminRole ? 'Visão geral do sistema' : 'Visão geral do departamento'
+    },
+    {
+      title: 'Documentos do Departamento',
+      icon: Building2,
+      href: '/user/documentos',
+      description: 'Ver documentos do seu departamento'
+    },
+    {
+      title: 'Meus Documentos',
+      icon: FolderOpen,
+      href: '/user/meus-documentos',
+      description: 'Documentos que você criou'
+    },
+    {
+      title: 'Buscar Documentos',
+      icon: Search,
+      href: '/user/buscar',
+      description: 'Pesquisar em todos os documentos'
+    },
+    {
+      title: 'Upload de Documento',
+      icon: Upload,
+      href: '/user/upload',
+      description: 'Enviar novo documento'
+    }
   ];
 
   const adminOnlyMenuItems = [
@@ -60,11 +88,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   let menuItems = userMenuItems;
-  if (user?.role === 'admin') {
+  
+  if (isAdminRole) {
     menuItems = [...userMenuItems, ...adminOnlyMenuItems];
   } else if (user?.role === 'editor') {
     menuItems = [...userMenuItems, ...editorMenuItems];
   }
+  // user vê apenas userMenuItems (já definido acima)
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href;

@@ -222,19 +222,18 @@ const DocumentoViewModal: React.FC<DocumentoViewModalProps> = ({
             </div>
           </div>
 
-          {documento.usuario && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Criado por</h3>
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm font-medium">
-                  {typeof documento.usuario === 'object' && documento.usuario?.nome
-                    ? documento.usuario.nome
-                    : 'N/A'}
-                </span>
+              {/* Criado por */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Criado por</h3>
+                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium">
+                    {documento.usuario && typeof documento.usuario === 'object' && documento.usuario?.nome 
+                      ? documento.usuario.nome 
+                      : 'Não informado'}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
 
           <div className="space-y-3">
             <div>

@@ -31,10 +31,18 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const dashboardHref = user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/editor';
+  const isAdminRole = user?.role === 'superadmin' || user?.role === 'org_admin' || user?.role === 'admin';
+
+  // Determinar URL do dashboard baseado no role
+  const dashboardHref = isAdminRole ? '/dashboard/admin' : '/dashboard/editor';
 
   const baseMenuItems = [
-    { title: user?.role === 'admin' ? 'Dashboard Admin' : 'Dashboard Editor', icon: Home, href: dashboardHref, description: 'Visão geral do sistema' },
+    {
+      title: isAdminRole ? 'Dashboard Admin' : 'Dashboard Editor',
+      icon: Home,
+      href: dashboardHref,
+      description: 'Visão geral do sistema'
+    }
   ];
 
   const managerMenuItems = [
@@ -49,7 +57,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   ];
 
   let menuItems = baseMenuItems;
-  if (user?.role === 'admin') {
+
+  if (isAdminRole) {
     menuItems = [...baseMenuItems, ...managerMenuItems, ...adminOnlyMenuItems];
   } else if (user?.role === 'editor') {
     menuItems = [...baseMenuItems, ...managerMenuItems];
@@ -162,7 +171,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {user.nome || user.username}
               </div>
-              <div className="text-xs text-red-500 dark:text-red-400 font-medium">
+              <div className="text-xs text-red-500 font-medium">
+                {user.role === 'superadmin' && 'Super Admin'}
+                {user.role === 'org_admin' && 'Org Admin'}
                 {user.role === 'admin' && 'Administrador'}
                 {user.role === 'editor' && 'Gerente'}
                 {user.role === 'user' && 'Usuário'}
