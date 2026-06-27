@@ -20,6 +20,7 @@ export interface DocumentoQueryParams {
   categoria?: string;
   tipo?: string;
   tipoMovimento?: 'enviado' | 'recebido' | 'interno';
+  status?: 'ativo' | 'arquivado';
   dataInicio?: string;
   dataFim?: string;
   ativo?: boolean;

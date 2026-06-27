@@ -1,15 +1,17 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ManageLayout from '@/components/ui/ManageLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
+import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import FormModal from '@/components/ui/FormModal';
 import UsuarioForm from '@/components/forms/UsuarioForm';
 import UsuarioDetail from '@/components/details/UsuarioDetail';
 import { Users, Edit, Trash2, Eye, Shield, User, Building2 } from 'lucide-react';
-import { Usuario } from '@/types';
+import { Usuario, UsuarioQueryParams, UserRole } from '@/types';
+import { UsuariosService } from '@/services/usuariosService';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,18 +22,37 @@ const UsuariosPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
-  
+  const [showFilter, setShowFilter] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+
   // Verificar permissões - apenas admin pode gerenciar usuários
   useEffect(() => {
     if (!authLoading && !canManageUsers()) {
       router.push('/dashboard');
     }
   }, [authLoading, canManageUsers, router]);
-  
-  const {
-    carregarPaginado,
-    remover
-  } = useUsuarios();
+
+  const { remover } = useUsuarios();
+
+  const fetchUsuarios = useCallback(async (params: {
+    page?: number; limit?: number; q?: string; sortBy?: string; sortOrder?: 'asc' | 'desc';
+  }) => {
+    const queryParams: UsuarioQueryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+      ...(params.q && { q: params.q }),
+      ...(params.sortBy && { sortBy: params.sortBy, sortOrder: params.sortOrder || 'asc' }),
+      ...(activeFilters.role && { role: activeFilters.role as UserRole }),
+      ...(activeFilters.ativo !== undefined && activeFilters.ativo !== '' && { ativo: activeFilters.ativo === 'true' }),
+    };
+    const response = await UsuariosService.listar(queryParams);
+    return {
+      data: response.data,
+      total: response.total || 0,
+      page: response.page || 1,
+      totalPages: Math.ceil((response.total || 0) / (params.limit || 10))
+    };
+  }, [activeFilters]);
 
   // Hook de paginação com dados da API
   const {
@@ -40,9 +61,10 @@ const UsuariosPage = () => {
     setSearchQuery,
     handleSort,
     paginationProps,
-    refetch
+    refetch,
+    goToPage
   } = usePaginatedData({
-    fetchData: carregarPaginado,
+    fetchData: fetchUsuarios,
     initialItemsPerPage: 10
   });
 
@@ -52,6 +74,41 @@ const UsuariosPage = () => {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
+  };
+
+  const filterFields: FilterField[] = [
+    {
+      id: 'role',
+      label: 'Função',
+      type: 'select',
+      placeholder: 'Todas as funções',
+      options: [
+        { id: 'org_admin', label: 'Adm. da Empresa', value: 'org_admin' },
+        { id: 'admin',     label: 'Administrador',   value: 'admin' },
+        { id: 'editor',    label: 'Editor',           value: 'editor' },
+        { id: 'user',      label: 'Utilizador',       value: 'user' },
+      ]
+    },
+    {
+      id: 'ativo',
+      label: 'Estado',
+      type: 'select',
+      placeholder: 'Todos os estados',
+      options: [
+        { id: 'true',  label: 'Ativo',   value: 'true' },
+        { id: 'false', label: 'Inativo', value: 'false' },
+      ]
+    },
+  ];
+
+  const handleFilterApply = (filters: Record<string, string>) => {
+    setActiveFilters(filters);
+    goToPage(1);
+  };
+
+  const handleFilterClear = () => {
+    setActiveFilters({});
+    goToPage(1);
   };
 
   const handleDelete = async (usuario: Usuario) => {
@@ -239,7 +296,7 @@ const UsuariosPage = () => {
           subtitle="Gerencie os usuários do sistema"
           onAdd={handleAdd}
           onSearch={handleSearch}
-          onFilter={() => console.log('Filtrar usuários')}
+          onFilter={() => setShowFilter(true)}
           addButtonText="Novo Usuário"
           searchPlaceholder="Pesquisar usuários..."
         />
@@ -271,6 +328,15 @@ const UsuariosPage = () => {
           isOpen={isDetailOpen}
           onClose={handleDetailClose}
           usuario={selectedUsuario}
+        />
+
+        <FilterPanel
+          isOpen={showFilter}
+          onClose={() => setShowFilter(false)}
+          fields={filterFields}
+          onApply={handleFilterApply}
+          onClear={handleFilterClear}
+          initialValues={activeFilters}
         />
       </div>
     </ManageLayout>

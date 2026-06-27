@@ -26,13 +26,36 @@ const DocumentosPage = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedDocumento, setSelectedDocumento] = useState<Documento | null>(null);
-  
+  const [showFilter, setShowFilter] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+
   const {
-    carregarPaginado,
     buscarPorId,
     remover,
     baixar
   } = useDocumentos();
+
+  const fetchDocumentos = useCallback(async (params: {
+    page?: number; limit?: number; q?: string; sortBy?: string; sortOrder?: 'asc' | 'desc';
+  }) => {
+    const queryParams: DocumentoQueryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+      ...(params.q && { q: params.q }),
+      ...(params.sortBy && { sortBy: params.sortBy, sortOrder: params.sortOrder || 'asc' }),
+      ...(activeFilters.tipoMovimento && { tipoMovimento: activeFilters.tipoMovimento as 'enviado' | 'recebido' | 'interno' }),
+      ...(activeFilters.status && { status: activeFilters.status as 'ativo' | 'arquivado' }),
+      ...(activeFilters.dataCriacao_start && { dataInicio: `${activeFilters.dataCriacao_start}T00:00:00.000Z` }),
+      ...(activeFilters.dataCriacao_end && { dataFim: `${activeFilters.dataCriacao_end}T23:59:59.999Z` }),
+    };
+    const response = await DocumentosService.listar(queryParams);
+    return {
+      data: response.data,
+      total: response.total || 0,
+      page: response.page || 1,
+      totalPages: Math.ceil((response.total || 0) / (params.limit || 10))
+    };
+  }, [activeFilters]);
 
   // Hook de paginação com dados da API
   const {
@@ -41,9 +64,10 @@ const DocumentosPage = () => {
     setSearchQuery,
     handleSort,
     paginationProps,
-    refetch
+    refetch,
+    goToPage
   } = usePaginatedData({
-    fetchData: carregarPaginado,
+    fetchData: fetchDocumentos,
     initialItemsPerPage: 10
   });
 
@@ -53,6 +77,45 @@ const DocumentosPage = () => {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
+  };
+
+  const filterFields: FilterField[] = [
+    {
+      id: 'tipoMovimento',
+      label: 'Tipo de Movimento',
+      type: 'select',
+      placeholder: 'Todos os tipos',
+      options: [
+        { id: 'enviado',  label: 'Enviado',  value: 'enviado' },
+        { id: 'recebido', label: 'Recebido', value: 'recebido' },
+        { id: 'interno',  label: 'Interno',  value: 'interno' },
+      ]
+    },
+    {
+      id: 'status',
+      label: 'Estado',
+      type: 'select',
+      placeholder: 'Todos os estados',
+      options: [
+        { id: 'ativo',      label: 'Ativo',      value: 'ativo' },
+        { id: 'arquivado',  label: 'Arquivado',   value: 'arquivado' },
+      ]
+    },
+    {
+      id: 'dataCriacao',
+      label: 'Período de Criação',
+      type: 'daterange',
+    }
+  ];
+
+  const handleFilterApply = (filters: Record<string, string>) => {
+    setActiveFilters(filters);
+    goToPage(1);
+  };
+
+  const handleFilterClear = () => {
+    setActiveFilters({});
+    goToPage(1);
   };
 
   const handleDelete = async (documento: Documento) => {
@@ -300,7 +363,7 @@ const DocumentosPage = () => {
           subtitle="Gerencie todos os documentos do sistema"
           onAdd={handleAdd}
           onSearch={handleSearch}
-          onFilter={() => console.log('Filtrar documentos')}
+          onFilter={() => setShowFilter(true)}
           addButtonText="Novo Documento"
           searchPlaceholder="Pesquisar documentos..."
         />
@@ -342,6 +405,15 @@ const DocumentosPage = () => {
             onDownload={() => handleDownload(selectedDocumento)}
           />
         )}
+
+        <FilterPanel
+          isOpen={showFilter}
+          onClose={() => setShowFilter(false)}
+          fields={filterFields}
+          onApply={handleFilterApply}
+          onClear={handleFilterClear}
+          initialValues={activeFilters}
+        />
       </div>
     </ManageLayout>
   );
