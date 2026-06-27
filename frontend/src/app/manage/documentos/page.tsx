@@ -1,10 +1,11 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import ManageLayout from '@/components/ui/ManageLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
+import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import DocumentoForm from '@/components/forms/DocumentoForm';
 import DocumentoDetail from '@/components/details/DocumentoDetail';
 import { FileText, Edit, Trash2, Eye, Download, Building2, FolderOpen } from 'lucide-react';
@@ -15,6 +16,8 @@ const DocumentPreview = dynamic(
   { ssr: false }
 );
 import { Documento } from '@/types';
+import { DocumentosService } from '@/services/documentosService';
+import type { DocumentoQueryParams } from '@/services/documentosService';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
 
