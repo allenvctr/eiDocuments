@@ -42,7 +42,8 @@ function CategoriaIcone({ icone, cor }: { icone?: string; cor?: string }) {
     </div>
   );
 }
-import { CategoriaDocumento } from '@/types';
+import { CategoriaDocumento, CategoriaQueryParams } from '@/types';
+import { CategoriasService } from '@/services/categoriasService';
 import { useCategorias } from '@/hooks/useCategorias';
 import { useDepartamentos } from '@/hooks/useDepartamentos';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
@@ -54,51 +55,53 @@ const CategoriasPage = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaDocumento | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
-  
-  const {
-    carregarPaginado,
-    remover
-  } = useCategorias();
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+
+  const { remover } = useCategorias();
 
   const { departamentos, carregar: carregarDepartamentos } = useDepartamentos();
 
-  // Determinar filtro de departamento baseado no role
+  // Se for editor, restringir ao seu departamento
   const departmentId = user?.role === 'editor' && user?.departamento
     ? (typeof user.departamento === 'string' ? user.departamento : user.departamento._id)
     : undefined;
 
-  // Memorizar a função fetchData para evitar re-renderizações
-  const fetchData = useCallback(async (params: any) => {
-    // Se for editor, adicionar filtro de departamento
-    if (departmentId) {
-      return carregarPaginado({
-        ...params,
-        departamento: departmentId
-      });
-    }
-    
-    // Admin vê todos
-    return carregarPaginado(params);
-  }, [departmentId, carregarPaginado]);
+  const fetchData = useCallback(async (params: {
+    page?: number; limit?: number; q?: string;
+  }) => {
+    const queryParams: CategoriaQueryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+      ...(params.q && { q: params.q }),
+      // Editor fica sempre restrito ao seu departamento; admin pode filtrar via painel
+      ...(departmentId ? { departamento: departmentId } : activeFilters.departamento && { departamento: activeFilters.departamento }),
+      ...(activeFilters.ativo !== undefined && activeFilters.ativo !== '' && { ativo: activeFilters.ativo === 'true' }),
+    };
+    const response = await CategoriasService.listar(queryParams);
+    return {
+      data: response.data,
+      total: response.total || 0,
+      page: response.page || 1,
+      totalPages: Math.ceil((response.total || 0) / (params.limit || 10))
+    };
+  }, [activeFilters, departmentId]);
 
   // Hook de paginação com dados da API
   const {
     data: categorias,
     loading,
     error,
-    searchQuery,
     setSearchQuery,
     handleSort,
     paginationProps,
-    refetch
+    refetch,
+    goToPage
   } = usePaginatedData({
     fetchData,
     initialItemsPerPage: 10
   });
 
   useEffect(() => {
-    // O usePaginatedData já carrega os dados automaticamente
     if (isAdmin()) {
       carregarDepartamentos();
     }
@@ -140,15 +143,14 @@ const CategoriasPage = () => {
     }
   ];
 
-  const handleApplyFilters = (filters: Record<string, any>) => {
+  const handleApplyFilters = (filters: Record<string, string>) => {
     setActiveFilters(filters);
-    // TODO: Implementar lógica de filtragem na API
-    console.log('Filtros aplicados:', filters);
+    goToPage(1);
   };
 
   const handleClearFilters = () => {
     setActiveFilters({});
-    refetch();
+    goToPage(1);
   };
 
   const handleSearch = async (query: string) => {
@@ -212,7 +214,7 @@ const CategoriasPage = () => {
     {
       key: 'codigo',
       title: 'Código',
-      sortable: true,
+      sortable: false,
       width: 'w-24',
       render: (value) => (
         <span className="font-mono text-sm bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-200 px-2 py-1 rounded">
@@ -223,7 +225,7 @@ const CategoriasPage = () => {
     {
       key: 'nome',
       title: 'Nome',
-      sortable: true,
+      sortable: false,
       ellipsis: true,
       maxWidth: '350px',
       render: (value, record) => (
@@ -243,7 +245,7 @@ const CategoriasPage = () => {
     {
       key: 'ativo',
       title: 'Status',
-      sortable: true,
+      sortable: false,
       width: 'w-20',
       render: (value) => (
         <span
@@ -260,7 +262,7 @@ const CategoriasPage = () => {
     {
       key: 'dataCriacao',
       title: 'Data de Criação',
-      sortable: true,
+      sortable: false,
       width: 'w-32',
       render: (value) => (
         <span className="text-sm text-gray-600 dark:text-gray-400">
