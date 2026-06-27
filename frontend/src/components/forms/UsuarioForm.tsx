@@ -22,11 +22,22 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   
-  // Apenas editores têm restrição de departamento; admins e org_admins têm acesso total
   const isEditor = user?.role === 'editor';
   const userDepartmentId = typeof user?.departamento === 'string'
     ? user.departamento
     : user?.departamento?._id;
+
+  // Roles que o utilizador logado pode criar/atribuir (apenas abaixo do seu nível)
+  const ROLE_LEVEL: Record<string, number> = { superadmin: 4, org_admin: 3, admin: 2, editor: 1, user: 0 };
+  const myLevel = ROLE_LEVEL[user?.role ?? 'user'] ?? 0;
+  const availableRoles = [
+    { value: 'admin',     label: 'Administrador',                    level: 2 },
+    { value: 'editor',    label: 'Editor (Gerente Departamental)',    level: 1 },
+    { value: 'user',      label: 'Utilizador (Nível Básico)',         level: 0 },
+  ].filter(r => r.level < myLevel);
+
+  const ADMIN_ROLES = ['admin', 'org_admin', 'superadmin'];
+  const roleNeedsDept = (role: string) => !ADMIN_ROLES.includes(role);
   
   const [formData, setFormData] = useState<CreateUsuario>({
     nome: '',
@@ -125,8 +136,8 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
       newErrors.senha = 'Senha deve ter pelo menos 6 caracteres';
     }
 
-    if (!formData.departamento) {
-      newErrors.departamento = 'Departamento é obrigatório';
+    if (roleNeedsDept(formData.role) && !formData.departamento) {
+      newErrors.departamento = 'Departamento é obrigatório para este nível';
     }
 
     if (!formData.role) {
@@ -265,7 +276,35 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
         </p>
       </div>
 
-      {/* Departamento */}
+      {/* Função */}
+      <div>
+        <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Função *
+        </label>
+        <select
+          id="role"
+          name="role"
+          value={formData.role}
+          onChange={handleInputChange}
+          className={`mt-1 block w-full rounded-md border ${errors.role ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-600'} px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-green-500 dark:focus:border-green-400 focus:outline-none focus:ring-green-500 sm:text-sm`}
+          disabled={loading}
+        >
+          {availableRoles.map(r => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
+        {errors.role && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.role}</p>
+        )}
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {formData.role === 'admin'  && 'Administrador gere utilizadores e documentos de toda a empresa'}
+          {formData.role === 'editor' && 'Editor gere documentos e categorias do seu departamento'}
+          {formData.role === 'user'   && 'Utilizador tem acesso básico de visualização e criação'}
+        </p>
+      </div>
+
+      {/* Departamento — apenas obrigatório para editor e user */}
+      {roleNeedsDept(formData.role) && (
       <div>
         <label htmlFor="departamento" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Departamento *
@@ -290,37 +329,11 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
         )}
         {isEditor && (
           <p className="mt-1 text-sm text-green-600 dark:text-green-400">
-            🔒 Editores só podem criar usuários no seu próprio departamento
+            Editores só podem criar utilizadores no seu próprio departamento
           </p>
         )}
       </div>
-
-      {/* Role */}
-      <div>
-        <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Função *
-        </label>
-        <select
-          id="role"
-          name="role"
-          value={formData.role}
-          onChange={handleInputChange}
-          className={`mt-1 block w-full rounded-md border ${errors.role ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-600'} px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-green-500 dark:focus:border-green-400 focus:outline-none focus:ring-green-500 sm:text-sm`}
-          disabled={loading}
-        >
-          <option value="user">Usuário (Nível Básico)</option>
-          <option value="editor">Editor (Gerente Departamental)</option>
-          <option value="org_admin">Administrador da Empresa (Acesso Total)</option>
-        </select>
-        {errors.role && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.role}</p>
-        )}
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {formData.role === 'org_admin' && '⚠️ Administrador tem acesso total à empresa e deve ser único'}
-          {formData.role === 'editor' && 'Editor gerencia documentos e categorias do seu departamento'}
-          {formData.role === 'user' && 'Usuário tem acesso básico de visualização e criação'}
-        </p>
-      </div>
+      )}
 
       {/* Ativo */}
       <div>

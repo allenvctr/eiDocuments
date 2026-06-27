@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { Documento } from '@/types';
+import { DocumentoQueryParams } from '@/services/documentosService';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { useCategorias } from '@/hooks/useCategorias';
 import { useAuth } from '@/hooks/useAuth';
@@ -59,9 +60,13 @@ const BuscarDocumentosPage = () => {
 
     setIsSearching(true);
     setHasSearched(true);
-    
+
     try {
-      const response = await buscarPorTexto(searchQuery);
+      const filtrosAPI: Omit<DocumentoQueryParams, 'q'> = {};
+      if (filtros.categoria) filtrosAPI.categoria = filtros.categoria;
+      if (filtros.tipoMovimento) filtrosAPI.tipoMovimento = filtros.tipoMovimento as 'enviado' | 'recebido' | 'interno';
+
+      const response = await buscarPorTexto(searchQuery, filtrosAPI);
       setSearchResults(response.data || []);
     } catch (err) {
       console.error('Erro na busca:', err);
