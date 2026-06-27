@@ -23,6 +23,7 @@ export interface TableAction<T = any> {
   icon?: React.ReactNode;
   onClick: (record: T) => void;
   variant?: 'default' | 'danger' | 'success' | 'warning';
+  hidden?: (record: T) => boolean;
 }
 
 interface DataTableProps<T = any> {
@@ -292,7 +293,7 @@ const DataTable = <T extends Record<string, any>>({
             top: dropdownPosition.y,
           }}
         >
-          {allActions.map((action) => (
+          {allActions.filter(action => !action.hidden || !action.hidden(data[openDropdown])).map((action) => (
             <button
               key={action.key}
               onClick={() => {

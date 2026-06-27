@@ -47,6 +47,8 @@ const DocumentosPage = () => {
       ...(activeFilters.status && { status: activeFilters.status as 'ativo' | 'arquivado' }),
       ...(activeFilters.dataCriacao_start && { dataInicio: `${activeFilters.dataCriacao_start}T00:00:00.000Z` }),
       ...(activeFilters.dataCriacao_end && { dataFim: `${activeFilters.dataCriacao_end}T23:59:59.999Z` }),
+      ...(activeFilters.dataEmissao_start && { dataEmissaoInicio: `${activeFilters.dataEmissao_start}T00:00:00.000Z` }),
+      ...(activeFilters.dataEmissao_end && { dataEmissaoFim: `${activeFilters.dataEmissao_end}T23:59:59.999Z` }),
     };
     const response = await DocumentosService.listar(queryParams);
     return {
@@ -104,6 +106,11 @@ const DocumentosPage = () => {
     {
       id: 'dataCriacao',
       label: 'Período de Criação',
+      type: 'daterange',
+    },
+    {
+      id: 'dataEmissao',
+      label: 'Período de Emissão',
       type: 'daterange',
     }
   ];
@@ -225,7 +232,7 @@ const DocumentosPage = () => {
     {
       key: 'departamento',
       title: 'Departamento',
-      sortable: true,
+      sortable: false,
       width: 'w-32',
       render: (value) => (
         <div className="flex items-center space-x-2">

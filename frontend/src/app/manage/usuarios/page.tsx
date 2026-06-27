@@ -18,7 +18,8 @@ import { useAuth } from '@/hooks/useAuth';
 
 const UsuariosPage = () => {
   const router = useRouter();
-  const { canManageUsers, loading: authLoading } = useAuth();
+  const { canManageUsers, loading: authLoading, user } = useAuth();
+  const ROLE_LEVEL: Record<string, number> = { superadmin: 4, org_admin: 3, admin: 2, editor: 1, user: 0 };
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
@@ -216,7 +217,7 @@ const UsuariosPage = () => {
     {
       key: 'departamento',
       title: 'Departamento',
-      sortable: true,
+      sortable: false,
       width: 'w-32',
       render: (value) => (
         <div className="flex items-center space-x-2">
@@ -230,7 +231,7 @@ const UsuariosPage = () => {
     {
       key: 'role',
       title: 'Função',
-      sortable: true,
+      sortable: false,
       width: 'w-40',
       render: (value) => getRoleBadge(value as string),
     },
@@ -248,7 +249,7 @@ const UsuariosPage = () => {
     {
       key: 'ativo',
       title: 'Status',
-      sortable: true,
+      sortable: false,
       width: 'w-20',
       render: (value) => (
         <span
@@ -276,7 +277,7 @@ const UsuariosPage = () => {
       label: 'Editar',
       icon: <Edit className="w-4 h-4" />,
       onClick: handleEdit,
-      // Só admin pode editar usuários
+      hidden: (u: Usuario) => (ROLE_LEVEL[u.role] ?? 0) >= (ROLE_LEVEL[user?.role ?? 'user'] ?? 0),
     },
     {
       key: 'delete',
@@ -284,7 +285,7 @@ const UsuariosPage = () => {
       icon: <Trash2 className="w-4 h-4" />,
       onClick: handleDelete,
       variant: 'danger',
-      // Só admin pode deletar usuários
+      hidden: (u: Usuario) => (ROLE_LEVEL[u.role] ?? 0) >= (ROLE_LEVEL[user?.role ?? 'user'] ?? 0),
     },
   ];
 

@@ -23,6 +23,8 @@ export interface DocumentoQueryParams {
   status?: 'ativo' | 'arquivado';
   dataInicio?: string;
   dataFim?: string;
+  dataEmissaoInicio?: string;
+  dataEmissaoFim?: string;
   ativo?: boolean;
   page?: number;
   limit?: number;
