@@ -304,7 +304,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
       </div>
 
       {/* Departamento — apenas obrigatório para editor e user */}
-      {roleNeedsDept(formData.role) && (
+      {roleNeedsDept(formData.role ?? 'user') && (
       <div>
         <label htmlFor="departamento" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Departamento *
