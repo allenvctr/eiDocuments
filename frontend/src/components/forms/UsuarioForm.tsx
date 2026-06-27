@@ -136,7 +136,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
       newErrors.senha = 'Senha deve ter pelo menos 6 caracteres';
     }
 
-    if (roleNeedsDept(formData.role) && !formData.departamento) {
+    if (roleNeedsDept(formData.role ?? 'user') && !formData.departamento) {
       newErrors.departamento = 'Departamento é obrigatório para este nível';
     }
 
