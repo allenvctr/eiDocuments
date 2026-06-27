@@ -293,13 +293,26 @@ const DocumentosPage = () => {
     },
     {
       key: 'dataCriacao',
-      title: 'Data',
+      title: 'Datas',
       sortable: true,
-      width: 'w-24',
-      render: (value) => (
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          {new Date(value).toLocaleDateString('pt-BR')}
-        </span>
+      width: 'w-28',
+      render: (value, record: any) => (
+        <div className="space-y-1">
+          {record.dataEmissao && (
+            <div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">Emissão</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {new Date(record.dataEmissao).toLocaleDateString('pt-BR')}
+              </div>
+            </div>
+          )}
+          <div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">Criação</div>
+            <div className={`text-sm ${record.dataEmissao ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              {new Date(value).toLocaleDateString('pt-BR')}
+            </div>
+          </div>
+        </div>
       ),
     },
     {

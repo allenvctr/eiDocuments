@@ -49,6 +49,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
     remetente: '',
     destinatario: '',
     responsavel: '',
+    dataEmissao: '',
     dataEnvio: '',
     dataRecebimento: '',
     status: 'ativo'
@@ -81,6 +82,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
           remetente: documento.remetente || '',
           destinatario: documento.destinatario || '',
           responsavel: documento.responsavel || '',
+          dataEmissao: formatDateForInput(documento.dataEmissao),
           dataEnvio: formatDateForInput(documento.dataEnvio),
           dataRecebimento: formatDateForInput(documento.dataRecebimento),
           status: documento.status
@@ -98,6 +100,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
           remetente: '',
           destinatario: '',
           responsavel: '',
+          dataEmissao: '',
           dataEnvio: '',
           dataRecebimento: '',
           status: 'ativo'
@@ -318,7 +321,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
           remetente: formData.remetente,
           destinatario: formData.destinatario,
           responsavel: formData.responsavel,
-          // Converter datas para formato ISO se preenchidas
+          dataEmissao: formData.dataEmissao ? new Date(formData.dataEmissao + 'T00:00:00').toISOString() : undefined,
           dataEnvio: formData.dataEnvio ? new Date(formData.dataEnvio + 'T00:00:00').toISOString() : undefined,
           dataRecebimento: formData.dataRecebimento ? new Date(formData.dataRecebimento + 'T00:00:00').toISOString() : undefined,
           status: formData.status,
@@ -337,7 +340,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
         // Para criação, precisamos incluir o arquivo
         const documentoData = {
           ...formData,
-          // Converter datas para formato ISO se preenchidas
+          dataEmissao: formData.dataEmissao ? new Date(formData.dataEmissao + 'T00:00:00').toISOString() : undefined,
           dataEnvio: formData.dataEnvio ? new Date(formData.dataEnvio + 'T00:00:00').toISOString() : undefined,
           dataRecebimento: formData.dataRecebimento ? new Date(formData.dataRecebimento + 'T00:00:00').toISOString() : undefined,
           ativo: formData.status === 'ativo',
@@ -511,6 +514,25 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
             <option value="enviado">Enviado</option>
             <option value="recebido">Recebido</option>
           </select>
+        </div>
+
+        {/* Data de Emissão — sempre visível, independente do tipo de movimento */}
+        <div>
+          <label htmlFor="dataEmissao" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Data de Emissão <span className="text-gray-400 dark:text-gray-500 text-xs">(opcional)</span>
+          </label>
+          <input
+            type="date"
+            id="dataEmissao"
+            name="dataEmissao"
+            value={formData.dataEmissao}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-green-500 dark:focus:border-green-400 focus:outline-none focus:ring-green-500 sm:text-sm"
+            disabled={loading}
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Data em que o documento foi emitido ou assinado, independente da data de registo no sistema.
+          </p>
         </div>
 
         {/* Campos condicionais por tipo de movimento */}

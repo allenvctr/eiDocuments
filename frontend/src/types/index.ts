@@ -62,6 +62,7 @@ export interface Documento {
   remetente?: string;    // Para documentos recebidos
   destinatario?: string; // Para documentos enviados
   responsavel?: string;  // Para documentos internos
+  dataEmissao?: string;  // Data de emissão do documento (independente da criação no sistema)
   dataEnvio?: string;    // Para documentos enviados
   dataRecebimento?: string; // Para documentos recebidos
   arquivo: {
@@ -184,6 +185,7 @@ export interface CreateDocumento {
   remetente?: string;
   destinatario?: string;
   responsavel?: string;
+  dataEmissao?: string;
   dataEnvio?: string;
   dataRecebimento?: string;
   tags?: string[];

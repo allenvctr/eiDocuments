@@ -209,6 +209,15 @@ const DocumentoDetail: React.FC<DocumentoDetailProps> = ({
                   </div>
                 </div>
               )}
+              {documento.dataEmissao && (
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Data de Emissão</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(documento.dataEmissao)}</p>
+                  </div>
+                </div>
+              )}
               {documento.tipoMovimento === 'enviado' && documento.dataEnvio && (
                 <div className="flex items-center space-x-3">
                   <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
