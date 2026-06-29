@@ -246,12 +246,17 @@ const DocumentosPage = () => {
     },
     {
       key: 'categoria',
-      title: 'Categoria',
-      width: 'w-28',
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: value.cor || '#6B7280' }}></div>
-          <span className="text-sm">{value.nome}</span>
+      title: 'Categoria / Tipo',
+      width: 'w-36',
+      render: (value, record: any) => (
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: value.cor || '#6B7280' }}></div>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{value.nome}</span>
+          </div>
+          {record.tipo && typeof record.tipo === 'object' && record.tipo.nome && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 pl-5">{record.tipo.nome}</div>
+          )}
         </div>
       ),
     },
