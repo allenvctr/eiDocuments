@@ -8,7 +8,7 @@ import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
 import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import DocumentoForm from '@/components/forms/DocumentoForm';
 import DocumentoDetail from '@/components/details/DocumentoDetail';
-import { FileText, Edit, Trash2, Eye, Download, Building2, FolderOpen } from 'lucide-react';
+import { FileText, Edit, Trash2, Eye, Download, Building2 } from 'lucide-react';
 
 // Dynamic import to avoid SSR issues with react-pdf
 const DocumentPreview = dynamic(
@@ -211,93 +211,69 @@ const DocumentosPage = () => {
       title: 'Documento',
       sortable: true,
       wrap: true,
-      maxWidth: '350px',
+      maxWidth: '260px',
       render: (value, record) => (
-        <div className="flex items-start space-x-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{value}</div>
+        <div className="flex items-start gap-2">
+          <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="font-medium text-gray-900 dark:text-gray-100 text-sm leading-tight break-words">{value}</div>
             {record.descricao && (
-              <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{record.descricao}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{record.descricao}</div>
             )}
-            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
-              {record.arquivo.originalName} • {formatFileSize(record.arquivo.size)}
+            <div className="flex items-center gap-1 mt-1 text-xs text-gray-400 dark:text-gray-500">
+              {record.departamento?.nome && (
+                <>
+                  <Building2 className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{record.departamento.nome}</span>
+                  <span>·</span>
+                </>
+              )}
+              <span className="truncate">{formatFileSize(record.arquivo?.size || 0)}</span>
             </div>
           </div>
         </div>
       ),
     },
     {
-      key: 'departamento',
-      title: 'Departamento',
-      sortable: false,
-      width: 'w-32',
-      render: (value) => (
-        <div className="flex items-center space-x-2">
-          <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <div>
-            <div className="font-medium text-sm">{value.nome}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{value.codigo}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
       key: 'categoria',
-      title: 'Categoria / Tipo',
-      width: 'w-36',
+      title: 'Categoria',
+      width: 'w-32',
       render: (value, record: any) => (
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: value.cor || '#6B7280' }}></div>
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{value.nome}</span>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: value?.cor || '#6B7280' }} />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{value?.nome}</span>
           </div>
           {record.tipo && typeof record.tipo === 'object' && record.tipo.nome && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 pl-5">{record.tipo.nome}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 pl-4 truncate">{record.tipo.nome}</div>
           )}
         </div>
       ),
     },
     {
       key: 'tipoMovimento',
-      title: 'Movimento/Responsável',
+      title: 'Movimento',
       sortable: false,
-      width: 'w-40',
+      width: 'w-32',
       render: (value, record: any) => {
         const movementConfig: Record<string, { bg: string; text: string; label: string }> = {
-          'recebido': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Recebido' },
-          'enviado': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Enviado' },
-          'interno': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-300', label: 'Interno' }
+          recebido: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-300', label: 'Recebido' },
+          enviado:  { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Enviado' },
+          interno:  { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Interno' },
         };
-        
         const config = movementConfig[value] || movementConfig.interno;
-        
-        let person = '';
-        let personLabel = '';
-        
-        if (value === 'recebido' && record.remetente) {
-          person = record.remetente;
-          personLabel = 'De:';
-        } else if (value === 'enviado' && record.destinatario) {
-          person = record.destinatario;
-          personLabel = 'Para:';
-        } else if (value === 'interno' && record.responsavel) {
-          person = record.responsavel;
-          personLabel = 'Resp:';
-        }
-        
+        const person =
+          value === 'recebido' ? record.remetente :
+          value === 'enviado'  ? record.destinatario :
+          record.responsavel;
+
         return (
-          <div className="space-y-1">
-            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
+          <div className="space-y-0.5">
+            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
               {config.label}
             </span>
             {person && (
-              <div className="text-sm">
-                <div className="text-xs text-gray-500 dark:text-gray-400">{personLabel}</div>
-                <div className="text-gray-900 dark:text-gray-100 font-medium truncate">{person}</div>
-              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[112px]" title={person}>{person}</div>
             )}
           </div>
         );
@@ -305,9 +281,9 @@ const DocumentosPage = () => {
     },
     {
       key: 'dataCriacao',
-      title: 'Datas',
+      title: 'Data',
       sortable: true,
-      width: 'w-28',
+      width: 'w-24',
       render: (value, record: any) => (
         <div className="space-y-1">
           {record.dataEmissao && (
@@ -320,27 +296,11 @@ const DocumentosPage = () => {
           )}
           <div>
             <div className="text-xs text-gray-400 dark:text-gray-500">Criação</div>
-            <div className={`text-sm ${record.dataEmissao ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {new Date(value).toLocaleDateString('pt-BR')}
             </div>
           </div>
         </div>
-      ),
-    },
-    {
-      key: 'ativo',
-      title: 'Status',
-      width: 'w-20',
-      render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
-          {value ? 'Ativo' : 'Inativo'}
-        </span>
       ),
     },
   ];

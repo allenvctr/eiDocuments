@@ -207,6 +207,7 @@ export class UploadService {
     remetente?: string;
     destinatario?: string;
     responsavel?: string;
+    dataEmissao?: string;
     dataEnvio?: string;
     dataRecebimento?: string;
     tags?: string[];

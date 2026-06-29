@@ -169,7 +169,7 @@ const DataTable = <T extends Record<string, any>>({
                 <th
                   key={column.key}
                   className={`
-                    px-6 py-3 text-left text-xs font-medium
+                    px-4 py-3 text-left text-xs font-medium
                     text-gray-500 dark:text-gray-400
                     uppercase tracking-wider
                     ${column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800' : ''}
@@ -197,7 +197,7 @@ const DataTable = <T extends Record<string, any>>({
                 </th>
               ))}
               {allActions.length > 0 && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Ações
                 </th>
               )}
@@ -209,7 +209,7 @@ const DataTable = <T extends Record<string, any>>({
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={`px-6 py-4 text-gray-900 dark:text-gray-100 ${column.ellipsis || column.wrap ? '' : 'whitespace-nowrap'}`}
+                    className={`px-4 py-3 text-gray-900 dark:text-gray-100 ${column.ellipsis || column.wrap ? '' : 'whitespace-nowrap'}`}
                     style={column.ellipsis || column.wrap ? { maxWidth: column.maxWidth || '300px' } : undefined}
                   >
                     {column.ellipsis ? (
@@ -233,7 +233,7 @@ const DataTable = <T extends Record<string, any>>({
                   </td>
                 ))}
                 {allActions.length > 0 && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-4 py-3 whitespace-nowrap text-right">
                     <div className="relative inline-block">
                       <button
                         data-dropdown-button

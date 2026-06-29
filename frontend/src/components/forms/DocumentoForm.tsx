@@ -8,6 +8,7 @@ import { useDepartamentos } from '@/hooks/useDepartamentos';
 import { useCategorias } from '@/hooks/useCategorias';
 import { useTipos } from '@/hooks/useTipos';
 import { useAuth } from '@/hooks/useAuth';
+import { UploadService } from '@/services/uploadService';
 import { Upload, X, FileText } from 'lucide-react';
 
 interface DocumentoFormProps {
@@ -30,6 +31,7 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
   const { user, isAdmin } = useAuth();
   
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -337,16 +339,35 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
 
         await atualizar(documento._id, updateData);
       } else {
-        // Para criação, precisamos incluir o arquivo
         const documentoData = {
           ...formData,
           dataEmissao: formData.dataEmissao ? new Date(formData.dataEmissao + 'T00:00:00').toISOString() : undefined,
           dataEnvio: formData.dataEnvio ? new Date(formData.dataEnvio + 'T00:00:00').toISOString() : undefined,
           dataRecebimento: formData.dataRecebimento ? new Date(formData.dataRecebimento + 'T00:00:00').toISOString() : undefined,
           ativo: formData.status === 'ativo',
-          arquivo: selectedFile!
+          arquivo: selectedFile!,
         };
-        await criar(documentoData as any);
+
+        try {
+          await UploadService.uploadComPresign({
+            titulo: documentoData.titulo,
+            descricao: documentoData.descricao,
+            categoria: documentoData.categoria,
+            tipo: documentoData.tipo || undefined,
+            departamento: documentoData.departamento,
+            tipoMovimento: documentoData.tipoMovimento as 'enviado' | 'recebido' | 'interno',
+            remetente: documentoData.remetente || undefined,
+            destinatario: documentoData.destinatario || undefined,
+            responsavel: documentoData.responsavel || undefined,
+            dataEmissao: documentoData.dataEmissao,
+            dataEnvio: documentoData.dataEnvio,
+            dataRecebimento: documentoData.dataRecebimento,
+            arquivo: selectedFile!,
+            onProgress: setUploadProgress,
+          });
+        } finally {
+          setUploadProgress(null);
+        }
       }
       
       onSuccess?.();
@@ -731,6 +752,22 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
           </div>
         )}
 
+        {/* Progress bar de upload */}
+        {uploadProgress !== null && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>A enviar ficheiro...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Botões */}
         <div className="flex justify-end space-x-3 pt-4">
           <button
@@ -746,7 +783,12 @@ const DocumentoForm: React.FC<DocumentoFormProps> = ({
             disabled={loading}
             className="rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            {loading ? 'Salvando...' : isEditing ? 'Atualizar' : 'Criar'}
+            {loading
+              ? uploadProgress !== null
+                ? `A enviar... ${uploadProgress}%`
+                : 'Salvando...'
+              : isEditing ? 'Atualizar' : 'Criar'
+            }
           </button>
         </div>
       </form>
