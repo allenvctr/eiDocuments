@@ -77,8 +77,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   };
 
   const handleClose = () => {
-    if (onMobileClose) onMobileClose();
-    else setIsCollapsed(true);
+    if (isMobileOpen && onMobileClose) {
+      onMobileClose();
+    } else {
+      setIsCollapsed(true);
+    }
   };
 
   return (

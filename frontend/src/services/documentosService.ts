@@ -208,6 +208,12 @@ export class DocumentosService {
     return blob;
   }
 
+  // Download do blob para preview local (react-pdf, mammoth, xlsx, etc.)
+  static async preview(id: string): Promise<{ blob: Blob; format: string }> {
+    const { blob, data } = await fetchFileBlob(`${API_BASE_URL}/documentos/${id}/preview`, 'Erro ao carregar preview');
+    return { blob, format: data.format };
+  }
+
   // Obter URL assinada de preview — devolve URL direta com Content-Disposition inline.
   // Para PDFs usar em <iframe src>, para imagens em <img src>.
   static async getPreviewUrl(id: string): Promise<{ url: string; format: string; originalName: string }> {
