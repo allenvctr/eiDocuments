@@ -25,7 +25,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar categorias', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -42,7 +42,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar categoria';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao buscar categoria', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -60,7 +60,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar categoria';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível criar a categoria', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -78,7 +78,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar categoria';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível atualizar a categoria', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao remover categoria';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível remover a categoria', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -113,9 +113,9 @@ export const useCategorias = () => {
       setCategorias(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar categorias';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao pesquisar categorias';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro na pesquisa', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -130,9 +130,9 @@ export const useCategorias = () => {
       const response = await CategoriasService.listarAtivas(departamentoId);
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias ativas';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar categorias', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -148,9 +148,9 @@ export const useCategorias = () => {
       setCategorias(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias do departamento';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar categorias', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -162,8 +162,8 @@ export const useCategorias = () => {
     try {
       return await CategoriasService.obterParaSelect(departamentoId);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao obter categorias para seleção';
-      showError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias';
+      showError('Erro ao carregar categorias', errorMessage);
       return [];
     }
   }, [showError]);
@@ -219,7 +219,7 @@ export const useCategorias = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar categorias';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar categorias', errorMessage);
       throw err;
     }
   }, [showError]);

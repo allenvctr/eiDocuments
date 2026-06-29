@@ -208,13 +208,36 @@ export class DocumentosService {
     return blob;
   }
 
-  // Preview de documento (inline) — usado pelo DocumentPreview para
-  // visualização sem forçar o download como anexo. `format` reflete o
-  // formato a renderizar (pode ser 'pdf' se o backend converteu o ficheiro
-  // original via LibreOffice, em tenants self-hosted).
-  static async preview(id: string): Promise<{ blob: Blob; format: string }> {
-    const { blob, data } = await fetchFileBlob(`${API_BASE_URL}/files/preview/${id}`, 'Erro ao carregar preview');
-    return { blob, format: data.format };
+  // Obter URL assinada de preview — devolve URL direta com Content-Disposition inline.
+  // Para PDFs usar em <iframe src>, para imagens em <img src>.
+  static async getPreviewUrl(id: string): Promise<{ url: string; format: string; originalName: string }> {
+    const doFetch = () => fetch(`${API_BASE_URL}/documentos/${id}/preview`, { credentials: 'include' });
+
+    let response = await doFetch();
+
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        response = await doFetch();
+      } else {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
+        throw new Error('Sessão expirada');
+      }
+    }
+
+    if (!response.ok) {
+      let message = 'Erro ao carregar preview';
+      try {
+        const data = await response.json();
+        if (data?.message) message = data.message;
+      } catch { /* sem corpo JSON */ }
+      throw new Error(message);
+    }
+
+    const json = await response.json();
+    return json.data as { url: string; format: string; originalName: string };
   }
 
   // Obter estatísticas de documentos

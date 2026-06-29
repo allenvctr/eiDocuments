@@ -25,9 +25,9 @@ export const useUsuarios = () => {
       setUsuarios(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar usuários';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar utilizadores';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar utilizadores', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -42,9 +42,9 @@ export const useUsuarios = () => {
       const response = await UsuariosService.buscarPorId(id);
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar usuário';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar utilizador';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao buscar utilizador', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -57,12 +57,12 @@ export const useUsuarios = () => {
       setLoading(true);
       setError(null);
       const response = await UsuariosService.criar(data);
-      success('Usuário criado com sucesso');
+      success('Utilizador criado com sucesso');
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar usuário';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar utilizador';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível criar o utilizador', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -75,12 +75,12 @@ export const useUsuarios = () => {
       setLoading(true);
       setError(null);
       const response = await UsuariosService.atualizar(id, data);
-      success('Usuário atualizado com sucesso');
+      success('Utilizador atualizado com sucesso');
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar usuário';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar utilizador';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível atualizar', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -93,13 +93,13 @@ export const useUsuarios = () => {
       setLoading(true);
       setError(null);
       await UsuariosService.remover(id);
-      success('Usuário removido com sucesso');
+      success('Utilizador removido com sucesso');
       // Atualizar lista local
       setUsuarios(prev => prev.filter(user => user._id !== id));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao remover usuário';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao remover utilizador';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível remover o utilizador', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -116,9 +116,9 @@ export const useUsuarios = () => {
       setUsuarios(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar usuários';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao pesquisar utilizadores';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro na pesquisa', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -133,9 +133,9 @@ export const useUsuarios = () => {
       const response = await UsuariosService.listarAtivos();
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar usuários ativos';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar utilizadores';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar utilizadores', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -152,9 +152,9 @@ export const useUsuarios = () => {
       setUsuarios(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar usuários por role';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao filtrar utilizadores';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao filtrar utilizadores', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -193,9 +193,9 @@ export const useUsuarios = () => {
         totalPages: Math.ceil((response.total || 0) / (params.limit || 10))
       };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar usuários';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar utilizadores';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar utilizadores', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -219,8 +219,8 @@ export const useUsuarios = () => {
     try {
       return await UsuariosService.obterParaSelect();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao obter usuários para seleção';
-      showError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar utilizadores';
+      showError('Erro ao carregar utilizadores', errorMessage);
       return [];
     }
   }, [showError]);

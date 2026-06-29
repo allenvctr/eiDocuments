@@ -25,7 +25,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar tipos', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -42,7 +42,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar tipo';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao buscar tipo', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -65,7 +65,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar tipo';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível criar o tipo', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -83,7 +83,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar tipo';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível atualizar o tipo', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao remover tipo';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Não foi possível remover o tipo', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -118,9 +118,9 @@ export const useTipos = () => {
       setTipos(response.data);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar tipos';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao pesquisar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro na pesquisa', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -135,9 +135,9 @@ export const useTipos = () => {
       const response = await TiposService.listarAtivos();
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos ativos';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar tipos', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -152,9 +152,9 @@ export const useTipos = () => {
       const response = await TiposService.listarAtivosPorDepartamento(departamentoId);
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos ativos';
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar tipos', errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -166,8 +166,8 @@ export const useTipos = () => {
     try {
       return await TiposService.obterParaSelect(categoriaId);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao obter tipos para seleção';
-      showError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
+      showError('Erro ao carregar tipos', errorMessage);
       return [];
     }
   }, [showError]);
@@ -177,8 +177,8 @@ export const useTipos = () => {
     try {
       return await TiposService.obterParaSelectPorDepartamento(departamentoId, categoriaId);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao obter tipos para seleção';
-      showError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
+      showError('Erro ao carregar tipos', errorMessage);
       return [];
     }
   }, [showError]);
@@ -239,7 +239,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar tipos', errorMessage);
       throw err;
     }
   }, [showError]);
@@ -291,7 +291,7 @@ export const useTipos = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar tipos';
       setError(errorMessage);
-      showError(errorMessage);
+      showError('Erro ao carregar tipos', errorMessage);
       throw err;
     }
   }, [showError]);

@@ -38,9 +38,11 @@ const ConfiguracoesPage = () => {
     confirmarSenha: ''
   });
 
+  const isBasicUser = user?.role === 'user';
+
   const tabs = [
     { id: 'perfil', label: 'Perfil', icon: User },
-    { id: 'senha', label: 'Senha', icon: Lock },
+    ...(!isBasicUser ? [{ id: 'senha', label: 'Senha', icon: Lock }] : []),
     { id: 'preferencias', label: 'Preferências', icon: Settings }
   ];
 
