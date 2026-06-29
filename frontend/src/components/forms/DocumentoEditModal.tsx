@@ -228,7 +228,6 @@ const DocumentoEditModal: React.FC<DocumentoEditModalProps> = ({
               >
                 <option value="ativo">Ativo</option>
                 <option value="arquivado">Arquivado</option>
-                <option value="rascunho">Rascunho</option>
               </select>
             </div>
           </div>
