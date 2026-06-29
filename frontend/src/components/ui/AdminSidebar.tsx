@@ -17,6 +17,7 @@ import {
   Users,
   Moon,
   Sun,
+  Settings,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -60,12 +61,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { title: 'Departamentos', icon: Building2, href: '/manage/departamentos', description: 'Gerenciar departamentos' },
   ];
 
+  const settingsMenuItem = { title: 'Configurações', icon: Settings, href: '/manage/configuracoes', description: 'Perfil e preferências' };
+
   let menuItems = baseMenuItems;
 
   if (isAdminRole) {
-    menuItems = [...baseMenuItems, ...managerMenuItems, ...adminOnlyMenuItems];
+    menuItems = [...baseMenuItems, ...managerMenuItems, ...adminOnlyMenuItems, settingsMenuItem];
   } else if (user?.role === 'editor') {
-    menuItems = [...baseMenuItems, ...managerMenuItems];
+    menuItems = [...baseMenuItems, ...managerMenuItems, settingsMenuItem];
   }
 
   const isActive = (href: string) => {

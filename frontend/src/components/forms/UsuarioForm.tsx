@@ -165,11 +165,13 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
       
       if (isEditing) {
         const updateData: UpdateUsuario = { ...formData };
-        // Se senha estiver vazia, não enviar
         if (!updateData.senha?.trim()) {
           delete updateData.senha;
         }
-        console.log('📝 Dados sendo enviados para atualização:', updateData);
+        // Admins não têm departamento — string vazia falharia a validação do backend
+        if (!updateData.departamento?.trim()) {
+          delete updateData.departamento;
+        }
         await atualizar(usuario._id, updateData);
       } else {
         console.log('📝 Dados sendo enviados para criação:', formData);
