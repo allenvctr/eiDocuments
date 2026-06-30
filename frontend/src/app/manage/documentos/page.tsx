@@ -47,6 +47,7 @@ const DocumentosPage = () => {
 
   // Load filter dropdown data on mount
   useEffect(() => {
+    if (!user) return;
     carregarDepts({ limit: 100 });
     carregarCats({ limit: 100 });
     carregarTipos({ limit: 100 });

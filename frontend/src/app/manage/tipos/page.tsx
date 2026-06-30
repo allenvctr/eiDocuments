@@ -31,6 +31,7 @@ const TiposPage = () => {
   const { departamentos, carregar: carregarDepartamentos } = useDepartamentos();
 
   const fetchData = useCallback(async (params: any) => {
+    if (!user) return { data: [], total: 0, page: 1, totalPages: 0 };
     const sanitized: Record<string, any> = {};
     const combined = { ...params, ...activeFilters };
     Object.entries(combined).forEach(([k, v]) => {
