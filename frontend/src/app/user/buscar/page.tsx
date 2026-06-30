@@ -212,7 +212,6 @@ const BuscarDocumentosPage = () => {
           showSearchButton={true}
           onClearSearch={handleClearSearch}
           searchPlaceholder="Digite sua busca aqui..."
-          defaultFiltersOpen={false}
           filterFields={filterFields}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}

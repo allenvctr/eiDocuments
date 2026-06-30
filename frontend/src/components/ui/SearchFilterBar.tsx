@@ -115,7 +115,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = (props) => {
     searchValue, onSearchChange, onSearch,
     searchPlaceholder = 'Pesquisar...',
     showSearchButton = false,
-    defaultFiltersOpen = true,
+    defaultFiltersOpen = false,
     filterFields, activeFilters, onFilterChange, onClearFilters,
   } = props;
 

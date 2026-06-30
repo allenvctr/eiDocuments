@@ -309,7 +309,6 @@ const DocumentosDepartamentoPage = () => {
           onSearchChange={handleSearchChange}
           onSearch={handleSearch}
           searchPlaceholder="Pesquisar documentos..."
-          defaultFiltersOpen={false}
           filterFields={filterFields}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
