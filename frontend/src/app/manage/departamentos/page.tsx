@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import ManageLayout from '@/components/ui/ManageLayout';
-import PageHeader from '@/components/ui/PageHeader';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
 import FormModal from '@/components/ui/FormModal';
-import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import DepartamentoForm from '@/components/forms/DepartamentoForm';
 import DepartamentoDetail from '@/components/details/DepartamentoDetail';
-import { Building2, Edit, Trash2, Eye } from 'lucide-react';
+import ModernButton from '@/components/ui/ModernButton';
+import { Building2, Edit, Trash2, Eye, Plus } from 'lucide-react';
 import { Departamento } from '@/types';
 import { useDepartamentos } from '@/hooks/useDepartamentos';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
@@ -17,117 +17,88 @@ import { useAuth } from '@/hooks/useAuth';
 
 const DepartamentosPage = () => {
   const router = useRouter();
-  const { isAdmin, canAccessAllDepartments, loading: authLoading } = useAuth();
+  const { isAdmin: checkIsAdmin, canAccessAllDepartments, loading: authLoading } = useAuth();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedDepartamento, setSelectedDepartamento] = useState<Departamento | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
-  
-  // Verificar permissões - apenas admin pode gerenciar departamentos
+  const [searchValue, setSearchValue] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+
   useEffect(() => {
-    if (!authLoading && !isAdmin()) {
+    if (!authLoading && !checkIsAdmin()) {
       router.push('/dashboard');
     }
-  }, [authLoading, isAdmin, router]);
-  
-  const {
-    carregarPaginado,
-    remover
-  } = useDepartamentos();
+  }, [authLoading, checkIsAdmin, router]);
 
-  // Hook de paginação com dados da API
+  const { carregarPaginado, remover } = useDepartamentos();
+
+  const fetchData = useCallback(async (params: {
+    page?: number; limit?: number; q?: string; sortBy?: string; sortOrder?: 'asc' | 'desc';
+  }) => {
+    const { q, ...rest } = params;
+    return carregarPaginado({
+      ...rest,
+      ...(q?.trim() && { q: q.trim() }),
+      ...(activeFilters.ativo !== undefined && activeFilters.ativo !== ''
+        && { ativo: activeFilters.ativo === 'true' }),
+    });
+  }, [carregarPaginado, activeFilters]);
+
   const {
     data: departamentos,
     loading,
-    error,
-    searchQuery,
     setSearchQuery,
     handleSort,
     paginationProps,
-    refetch
-  } = usePaginatedData({
-    fetchData: carregarPaginado,
-    initialItemsPerPage: 10
-  });
+    refetch,
+    goToPage
+  } = usePaginatedData({ fetchData, initialItemsPerPage: 10 });
 
-  useEffect(() => {
-    // O usePaginatedData já carrega os dados automaticamente
-  }, []);
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v);
+  };
 
-  // Configuração dos filtros
-  const filterFields: FilterField[] = [
-    {
-      id: 'ativo',
-      label: 'Status',
-      type: 'select',
-      placeholder: 'Todos',
-      options: [
-        { id: 'true', label: 'Ativos', value: 'true' },
-        { id: 'false', label: 'Inativos', value: 'false' }
-      ]
-    }
-  ];
-
-  const handleApplyFilters = (filters: Record<string, any>) => {
-    setActiveFilters(filters);
-    // TODO: Implementar lógica de filtragem na API
-    console.log('Filtros aplicados:', filters);
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
+    goToPage(1);
   };
 
   const handleClearFilters = () => {
     setActiveFilters({});
-    refetch();
+    goToPage(1);
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-  };
+  const filterFields: SearchFilterField[] = useMemo(() => [
+    {
+      key: 'ativo', label: 'Estado', type: 'select', placeholder: 'Todos',
+      options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }]
+    }
+  ], []);
 
   const handleDelete = async (departamento: Departamento) => {
-    if (!confirm(`Deseja realmente excluir o departamento "${departamento.nome}"?`)) {
-      return;
-    }
-
+    if (!confirm(`Deseja realmente excluir o departamento "${departamento.nome}"?`)) return;
     try {
       await remover(departamento._id);
-      refetch(); // Recarregar lista
+      refetch();
     } catch (err) {
-      // Erro já tratado pelo hook
       console.error('Erro ao excluir departamento:', err);
     }
   };
 
-  const handleAdd = () => {
-    setSelectedDepartamento(null);
-    setIsFormOpen(true);
-  };
+  const isAdmin = checkIsAdmin();
 
-  const handleEdit = (departamento: Departamento) => {
-    setSelectedDepartamento(departamento);
-    setIsFormOpen(true);
-  };
-
-  const handleView = (departamento: Departamento) => {
-    setSelectedDepartamento(departamento);
-    setIsDetailOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    refetch(); // Recarregar lista após sucesso
-    setIsFormOpen(false); // Fechar modal
-    setSelectedDepartamento(null); // Limpar seleção
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedDepartamento(null);
-  };
-
-  const handleDetailClose = () => {
-    setIsDetailOpen(false);
-    setSelectedDepartamento(null);
-  };
+  const handleAdd = () => { setSelectedDepartamento(null); setIsFormOpen(true); };
+  const handleEdit = (d: Departamento) => { setSelectedDepartamento(d); setIsFormOpen(true); };
+  const handleView = (d: Departamento) => { setSelectedDepartamento(d); setIsDetailOpen(true); };
+  const handleFormSuccess = () => { refetch(); setIsFormOpen(false); setSelectedDepartamento(null); };
+  const handleFormClose = () => { setIsFormOpen(false); setSelectedDepartamento(null); };
+  const handleDetailClose = () => { setIsDetailOpen(false); setSelectedDepartamento(null); };
 
   const columns: TableColumn<Departamento>[] = [
     {
@@ -149,9 +120,7 @@ const DepartamentosPage = () => {
       maxWidth: '350px',
       render: (value, record) => (
         <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <Building2 className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-          </div>
+          <Building2 className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-gray-100">{value}</div>
             {record.descricao && (
@@ -169,13 +138,11 @@ const DepartamentosPage = () => {
       sortable: true,
       width: 'w-20',
       render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
+        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+          value
+            ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+            : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
+        }`}>
           {value ? 'Ativo' : 'Inativo'}
         </span>
       ),
@@ -194,41 +161,34 @@ const DepartamentosPage = () => {
   ];
 
   const actions: TableAction<Departamento>[] = [
-    {
-      key: 'view',
-      label: 'Visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    // Apenas admin pode editar/deletar departamentos
-    ...(isAdmin() ? [
-      {
-        key: 'edit' as const,
-        label: 'Editar',
-        icon: <Edit className="w-4 h-4" />,
-        onClick: handleEdit,
-      },
-      {
-        key: 'delete' as const,
-        label: 'Excluir',
-        icon: <Trash2 className="w-4 h-4" />,
-        onClick: handleDelete,
-        variant: 'danger' as const,
-      },
+    { key: 'view', label: 'Visualizar', icon: <Eye className="w-4 h-4" />, onClick: handleView },
+    ...(isAdmin ? [
+      { key: 'edit' as const,   label: 'Editar',  icon: <Edit className="w-4 h-4" />,   onClick: handleEdit },
+      { key: 'delete' as const, label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: handleDelete, variant: 'danger' as const },
     ] : [])
   ];
 
   return (
     <ManageLayout>
       <div>
-        <PageHeader
+        <SearchFilterBar
           title="Departamentos"
           subtitle="Gerencie os departamentos da organização"
-          onAdd={isAdmin() ? handleAdd : undefined} // Apenas admin pode adicionar
-          onSearch={handleSearch}
-          onFilter={() => setIsFilterOpen(true)}
-          addButtonText="Novo Departamento"
+          actionButton={
+            isAdmin ? (
+              <ModernButton onClick={handleAdd} size="sm" className="flex items-center gap-1.5">
+                <Plus className="w-4 h-4" />
+                Novo Departamento
+              </ModernButton>
+            ) : undefined
+          }
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Pesquisar departamentos..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
         />
 
         <DataTable
@@ -241,39 +201,14 @@ const DepartamentosPage = () => {
           onSort={handleSort}
         />
 
-        {/* Painel de Filtros */}
-        <FilterPanel
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          fields={filterFields}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          initialValues={activeFilters}
-        />
-
-        {/* Formulário Modal */}
         <FormModal
           isOpen={isFormOpen}
           onClose={handleFormClose}
           title={selectedDepartamento ? 'Editar Departamento' : 'Novo Departamento'}
         >
-          <DepartamentoForm
-            departamento={selectedDepartamento}
-            onSuccess={handleFormSuccess}
-          />
+          <DepartamentoForm departamento={selectedDepartamento} onSuccess={handleFormSuccess} />
         </FormModal>
 
-        {/* Painel de Filtros */}
-        <FilterPanel
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          fields={filterFields}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          initialValues={activeFilters}
-        />
-
-        {/* Modal de Detalhes */}
         <DepartamentoDetail
           isOpen={isDetailOpen}
           onClose={handleDetailClose}

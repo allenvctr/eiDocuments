@@ -1,59 +1,108 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import UserLayout from '@/components/ui/UserLayout';
-import PageHeader from '@/components/ui/PageHeader';
-import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
-import { FileText, Eye, Download, Calendar, Edit } from 'lucide-react';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
+import DataTable, { TableColumn } from '@/components/ui/DataTable';
+import { FileText, Eye, Download, Edit, Calendar } from 'lucide-react';
 import { Documento } from '@/types';
-import { useDocumentos } from '@/hooks/useDocumentos';
-import { useAuth } from '@/hooks/useAuth';
 import { DocumentosService } from '@/services/documentosService';
+import type { DocumentoQueryParams } from '@/services/documentosService';
+import { usePaginatedData } from '@/hooks/usePaginatedData';
+import { useCategorias } from '@/hooks/useCategorias';
+import { useTipos } from '@/hooks/useTipos';
+import { useAuth } from '@/hooks/useAuth';
+import { useDocumentos } from '@/hooks/useDocumentos';
 import DocumentoViewModal from '@/components/details/DocumentoViewModal';
 import DocumentoEditModal from '@/components/forms/DocumentoEditModal';
 
-// Dynamic import to avoid SSR issues with react-pdf
 const DocumentPreview = dynamic(
   () => import('@/components/ui/DocumentPreview').then(mod => ({ default: mod.DocumentPreview })),
   { ssr: false }
 );
 
 const DocumentosDepartamentoPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+  const { baixar } = useDocumentos();
+
+  const [searchValue, setSearchValue] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [selectedDocumento, setSelectedDocumento] = useState<Documento | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const { user } = useAuth();
-  
-  const {
-    documentos,
-    loading,
-    carregar,
-    buscarPorTexto,
-    buscarPorDepartamento,
-    baixar
-  } = useDocumentos();
+
+  const deptId = user?.departamento?._id;
+
+  const { categorias, carregarPorDepartamento } = useCategorias();
+  const { tipos, carregar: carregarTipos } = useTipos();
 
   useEffect(() => {
-    // Carregar documentos do departamento do usuário logado
-    if (user?.departamento?._id) {
-      buscarPorDepartamento(user.departamento._id);
+    if (deptId) {
+      carregarPorDepartamento(deptId, true);
+      carregarTipos({ limit: 100 });
     }
-  }, [user, buscarPorDepartamento]);
+  }, [deptId, carregarPorDepartamento, carregarTipos]);
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (!query.trim() && user?.departamento?._id) {
-      // Se não há busca, volta a mostrar documentos do departamento
-      buscarPorDepartamento(user.departamento._id);
-      return;
-    }
-    // Busca por texto mas ainda filtrando pelo departamento
-    if (user?.departamento?._id) {
-      buscarPorDepartamento(user.departamento._id, { q: query });
-    }
+  const fetchDocumentos = useCallback(async (params: {
+    page?: number; limit?: number; q?: string; sortBy?: string; sortOrder?: 'asc' | 'desc';
+  }) => {
+    if (!deptId) return { data: [], total: 0, page: 1, totalPages: 0 };
+
+    const queryParams: DocumentoQueryParams = {
+      page: params.page || 1,
+      limit: params.limit || 10,
+      departamento: deptId,
+      ...(params.q?.trim() && { q: params.q.trim() }),
+      ...(params.sortBy && { sortBy: params.sortBy, sortOrder: params.sortOrder || 'asc' }),
+      ...(activeFilters.categoria && { categoria: activeFilters.categoria }),
+      ...(activeFilters.tipo && { tipo: activeFilters.tipo }),
+      ...(activeFilters.tipoMovimento && { tipoMovimento: activeFilters.tipoMovimento as 'enviado' | 'recebido' | 'interno' }),
+      ...(activeFilters.dataEmissao_start && { dataEmissaoInicio: `${activeFilters.dataEmissao_start}T00:00:00.000Z` }),
+      ...(activeFilters.dataEmissao_end && { dataEmissaoFim: `${activeFilters.dataEmissao_end}T23:59:59.999Z` }),
+    };
+
+    const response = await DocumentosService.listar(queryParams);
+    return {
+      data: response.data,
+      total: response.total || 0,
+      page: response.page || 1,
+      totalPages: Math.ceil((response.total || 0) / (params.limit || 10))
+    };
+  }, [deptId, activeFilters]);
+
+  const {
+    data: documentos,
+    loading,
+    setSearchQuery,
+    handleSort,
+    paginationProps,
+    refetch,
+    goToPage
+  } = usePaginatedData({ fetchData: fetchDocumentos, initialItemsPerPage: 10 });
+
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v); // live search
+  };
+
+  const handleSearch = () => {
+    setSearchQuery(searchValue);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
+    goToPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilters({});
+    goToPage(1);
   };
 
   const handleDownload = async (documento: Documento) => {
@@ -66,75 +115,48 @@ const DocumentosDepartamentoPage = () => {
 
   const handleView = (documento: Documento) => {
     setSelectedDocumento(documento);
-    setIsViewModalOpen(true); // Abre modal de detalhes
+    setIsViewModalOpen(true);
   };
 
   const handlePreview = (documento: Documento) => {
     setSelectedDocumento(documento);
-    setIsPreviewOpen(true); // Abre preview do documento
+    setIsPreviewOpen(true);
   };
 
   const handleEdit = (documento: Documento) => {
-    // Verificar se o usuário pode editar este documento
-    const canEdit = canUserEditDocument(documento);
-    if (!canEdit) {
+    if (!canUserEditDocument(documento)) {
       alert('Você só pode editar documentos que foram criados por você.');
       return;
     }
-    
     setSelectedDocumento(documento);
     setIsEditModalOpen(true);
   };
 
   const canUserEditDocument = (documento: Documento): boolean => {
     if (!user) return false;
-    // Admins e org_admins podem editar qualquer documento
     if (['admin', 'org_admin', 'superadmin'].includes(user.role)) return true;
-    // Editores (gerentes) podem editar qualquer documento do seu departamento
     if (user.role === 'editor') return true;
-    // Utilizadores normais: apenas documentos que criaram
-    const docUserId = typeof documento.usuario === 'string'
-      ? documento.usuario
-      : documento.usuario?._id;
+    const docUserId = typeof documento.usuario === 'string' ? documento.usuario : documento.usuario?._id;
     return docUserId === user._id;
   };
 
   const handleSaveEdit = async (documento: Documento, formData: any) => {
-    try {
-      console.log('Salvando edições do documento:', documento._id, formData);
-      
-      // Verificar permissão novamente antes de salvar
-      if (!canUserEditDocument(documento)) {
-        throw new Error('Você não tem permissão para editar este documento.');
-      }
-      
-      // Preparar dados para atualização
-      const updateData: any = {};
-      
-      // Apenas incluir campos que têm valores (categoria e tipo omitidos por enquanto)
-      if (formData.titulo?.trim()) updateData.titulo = formData.titulo.trim();
-      if (formData.descricao?.trim()) updateData.descricao = formData.descricao.trim();
-      if (formData.tipoMovimento) updateData.tipoMovimento = formData.tipoMovimento;
-      if (formData.remetente?.trim()) updateData.remetente = formData.remetente.trim();
-      if (formData.destinatario?.trim()) updateData.destinatario = formData.destinatario.trim();
-      if (formData.responsavel?.trim()) updateData.responsavel = formData.responsavel.trim();
-      if (formData.dataEnvio) updateData.dataEnvio = formData.dataEnvio + 'T00:00:00.000Z';
-      if (formData.dataRecebimento) updateData.dataRecebimento = formData.dataRecebimento + 'T00:00:00.000Z';
-      if (formData.status) updateData.ativo = formData.status === 'ativo';
-
-      console.log('Dados preparados para atualização:', updateData);
-
-      // Atualizar documento via serviço
-      await DocumentosService.atualizar(documento._id, updateData);
-      
-      // Recarregar documentos do departamento
-      if (user?.departamento?._id) {
-        buscarPorDepartamento(user.departamento._id);
-      }
-    } catch (error) {
-      console.error('Erro ao salvar documento:', error);
-      throw error;
+    if (!canUserEditDocument(documento)) {
+      throw new Error('Você não tem permissão para editar este documento.');
     }
+    const updateData: any = {};
+    if (formData.titulo?.trim()) updateData.titulo = formData.titulo.trim();
+    if (formData.descricao?.trim()) updateData.descricao = formData.descricao.trim();
+    if (formData.tipoMovimento) updateData.tipoMovimento = formData.tipoMovimento;
+    if (formData.remetente?.trim()) updateData.remetente = formData.remetente.trim();
+    if (formData.destinatario?.trim()) updateData.destinatario = formData.destinatario.trim();
+    if (formData.responsavel?.trim()) updateData.responsavel = formData.responsavel.trim();
+    if (formData.dataEnvio) updateData.dataEnvio = `${formData.dataEnvio}T00:00:00.000Z`;
+    if (formData.dataRecebimento) updateData.dataRecebimento = `${formData.dataRecebimento}T00:00:00.000Z`;
+    if (formData.status) updateData.ativo = formData.status === 'ativo';
+
+    await DocumentosService.atualizar(documento._id, updateData);
+    refetch();
   };
 
   const formatFileSize = (bytes: number) => {
@@ -143,47 +165,20 @@ const DocumentosDepartamentoPage = () => {
     return mb < 1 ? `${(bytes / 1024).toFixed(1)} KB` : `${mb.toFixed(1)} MB`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getMovementBadge = (tipoMovimento: string, record: any) => {
-    const movementConfig: Record<string, { bg: string; text: string; label: string }> = {
-      'recebido': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Recebido' },
-      'enviado': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Enviado' },
-      'interno': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-300', label: 'Interno' }
-    };
-    
-    const config = movementConfig[tipoMovimento] || movementConfig.interno;
-    
-    let person = '';
-    let personLabel = '';
-    
-    if (tipoMovimento === 'recebido' && record.remetente) {
-      person = record.remetente;
-      personLabel = 'De:';
-    } else if (tipoMovimento === 'enviado' && record.destinatario) {
-      person = record.destinatario;
-      personLabel = 'Para:';
-    } else if (tipoMovimento === 'interno' && record.responsavel) {
-      person = record.responsavel;
-      personLabel = 'Responsável:';
-    }
-    
-    return (
-      <div className="space-y-1">
-        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
-          {config.label}
-        </span>
-        {person && (
-          <div className="text-sm">
-            <div className="text-xs text-gray-500 dark:text-gray-400">{personLabel}</div>
-            <div className="text-gray-900 dark:text-gray-100 font-medium truncate">{person}</div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const filterFields: SearchFilterField[] = useMemo(() => [
+    { key: 'categoria', label: 'Categoria', type: 'select', dataSource: 'categorias', placeholder: 'Todas as categorias' },
+    { key: 'tipo', label: 'Tipo', type: 'select', dataSource: 'tipos', placeholder: 'Todos os tipos' },
+    {
+      key: 'tipoMovimento', label: 'Movimento', type: 'select',
+      options: [
+        { value: 'enviado', label: 'Enviado' },
+        { value: 'recebido', label: 'Recebido' },
+        { value: 'interno', label: 'Interno' },
+      ],
+      placeholder: 'Todos'
+    },
+    { key: 'dataEmissao', label: 'Data de Emissão', type: 'daterange' },
+  ], []);
 
   const columns: TableColumn[] = [
     {
@@ -194,9 +189,7 @@ const DocumentosDepartamentoPage = () => {
       maxWidth: '350px',
       render: (value, record: any) => (
         <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-          </div>
+          <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{value}</div>
             {record.descricao && (
@@ -204,7 +197,7 @@ const DocumentosDepartamentoPage = () => {
             )}
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center space-x-2 min-w-0">
               <span className="truncate">{record.arquivo?.originalName || 'Arquivo não encontrado'}</span>
-              <span className="flex-shrink-0">•</span>
+              <span className="flex-shrink-0">·</span>
               <span className="flex-shrink-0">{formatFileSize(record.arquivo?.size || 0)}</span>
             </div>
           </div>
@@ -215,152 +208,146 @@ const DocumentosDepartamentoPage = () => {
       key: 'categoria',
       title: 'Categoria',
       width: 'w-32',
-      render: (value: any) => (
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: value?.cor || '#6B7280' }}></div>
-          <span className="text-sm font-medium">{value?.nome || 'N/A'}</span>
+      render: (value: any, record: any) => (
+        <div className="space-y-0.5">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: value?.cor || '#6B7280' }} />
+            <span className="text-sm font-medium">{value?.nome || 'N/A'}</span>
+          </div>
+          {record.tipo && typeof record.tipo === 'object' && record.tipo.nome && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 pl-5 truncate">{record.tipo.nome}</div>
+          )}
         </div>
       ),
     },
     {
       key: 'tipoMovimento',
-      title: 'Tipo/Responsável',
-      sortable: false,
-      width: 'w-40',
-      render: (value, record: any) => getMovementBadge(value, record),
+      title: 'Movimento',
+      width: 'w-28',
+      render: (value: string, record: any) => {
+        const cfg: Record<string, { bg: string; text: string; label: string }> = {
+          recebido: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-300', label: 'Recebido' },
+          enviado:  { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Enviado' },
+          interno:  { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Interno' },
+        };
+        const c = cfg[value] || cfg.interno;
+        const person =
+          value === 'recebido' ? record.remetente :
+          value === 'enviado'  ? record.destinatario :
+          record.responsavel;
+
+        return (
+          <div className="space-y-0.5">
+            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${c.bg} ${c.text}`}>{c.label}</span>
+            {person && (
+              <div className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[100px]" title={person}>{person}</div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'dataCriacao',
       title: 'Data',
       sortable: true,
-      width: 'w-24',
-      render: (value) => (
-        <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-          <Calendar className="w-4 h-4" />
-          <span>{formatDate(value)}</span>
+      width: 'w-28',
+      render: (value: string, record: any) => (
+        <div className="space-y-1">
+          {record.dataEmissao && (
+            <div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">Emissão</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {new Date(record.dataEmissao).toLocaleDateString('pt-BR')}
+              </div>
+            </div>
+          )}
+          <div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">Criação</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {new Date(value).toLocaleDateString('pt-BR')}
+            </div>
+          </div>
         </div>
-      ),
-    },
-    {
-      key: 'ativo',
-      title: 'Status',
-      width: 'w-20',
-      render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
-          {value ? 'Ativo' : 'Inativo'}
-        </span>
       ),
     },
     {
       key: 'actions',
       title: 'Ações',
-      width: 'w-40',
-      render: (value, record: Documento) => (
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handlePreview(record)}
-            className="p-1 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors"
-            title="Pré-visualizar"
-          >
+      width: 'w-36',
+      render: (_, record: Documento) => (
+        <div className="flex items-center space-x-1">
+          <button onClick={() => handlePreview(record)} className="p-1.5 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors" title="Pré-visualizar">
             <Eye className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => handleDownload(record)}
-            className="p-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-            title="Download"
-          >
+          <button onClick={() => handleDownload(record)} className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors" title="Download">
             <Download className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => handleView(record)}
-            className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
-            title="Detalhes"
-          >
+          <button onClick={() => handleView(record)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors" title="Detalhes">
             <FileText className="w-4 h-4" />
           </button>
-          {canUserEditDocument(record) && (
-            <button
-              onClick={() => handleEdit(record)}
-              className="p-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
-              title="Editar"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-          )}
-          {!canUserEditDocument(record) && (
-            <div className="p-1 text-gray-300 dark:text-gray-600" title="Você não pode editar este documento">
-              <Edit className="w-4 h-4" />
-            </div>
-          )}
+          <button
+            onClick={() => handleEdit(record)}
+            className={`p-1.5 rounded transition-colors ${canUserEditDocument(record) ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30' : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'}`}
+            title={canUserEditDocument(record) ? 'Editar' : 'Sem permissão para editar'}
+            disabled={!canUserEditDocument(record)}
+          >
+            <Edit className="w-4 h-4" />
+          </button>
         </div>
       ),
     },
   ];
 
-
-
   return (
     <UserLayout>
       <div>
-        <PageHeader
-          title={`Documentos ${user?.departamento?.nome ? `- ${user.departamento.nome}` : 'do Departamento'}`}
-          subtitle={`Acesse e visualize documentos ${user?.departamento?.nome ? `do departamento ${user.departamento.nome}` : 'do seu departamento'}`}
+        <SearchFilterBar
+          title={`Documentos${user?.departamento?.nome ? ` — ${user.departamento.nome}` : ' do Departamento'}`}
+          subtitle="Documentos do seu departamento"
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           onSearch={handleSearch}
-          onFilter={() => console.log('Filtrar documentos')}
           searchPlaceholder="Pesquisar documentos..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          categorias={categorias}
+          tipos={tipos}
         />
 
         <DataTable
-          data={documentos}
+          data={documentos as Documento[]}
           columns={columns}
-          actions={[]} // Remover ações fixas, usar ações dinâmicas na coluna
+          actions={[]}
           loading={loading}
           emptyMessage="Nenhum documento encontrado no seu departamento"
-          onSort={(column, direction) => {
-            console.log('Ordenar por:', column, direction);
-          }}
+          pagination={paginationProps}
+          onSort={handleSort}
         />
 
-        {/* Modais */}
-        {/* Preview do Documento */}
         {selectedDocumento && (
           <DocumentPreview
             isOpen={isPreviewOpen}
-            onClose={() => {
-              setIsPreviewOpen(false);
-              setSelectedDocumento(null);
-            }}
+            onClose={() => { setIsPreviewOpen(false); setSelectedDocumento(null); }}
             documento={selectedDocumento}
             onDownload={() => handleDownload(selectedDocumento)}
           />
         )}
 
-        {/* Detalhes do Documento */}
         <DocumentoViewModal
           documento={selectedDocumento}
           isOpen={isViewModalOpen}
-          onClose={() => {
-            setIsViewModalOpen(false);
-            setSelectedDocumento(null);
-          }}
+          onClose={() => { setIsViewModalOpen(false); setSelectedDocumento(null); }}
           onEdit={handleEdit}
           onDownload={handleDownload}
         />
 
-        {/* Edição do Documento */}
         <DocumentoEditModal
           documento={selectedDocumento}
           isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedDocumento(null);
-          }}
+          onClose={() => { setIsEditModalOpen(false); setSelectedDocumento(null); }}
           onSave={handleSaveEdit}
         />
       </div>

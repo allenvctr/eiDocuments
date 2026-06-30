@@ -19,6 +19,7 @@ export interface DocumentoQueryParams {
   departamento?: string;
   categoria?: string;
   tipo?: string;
+  usuario?: string;
   tipoMovimento?: 'enviado' | 'recebido' | 'interno';
   status?: 'ativo' | 'arquivado';
   dataInicio?: string;

@@ -1,72 +1,67 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import UserLayout from '@/components/ui/UserLayout';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
-import {
-  Search,
-  FileText,
-  Eye,
-  Download,
-  Building2,
-  Calendar,
-  Filter,
-  X
-} from 'lucide-react';
+import { Search, FileText, Eye, Download, Building2, Calendar } from 'lucide-react';
 import { Documento } from '@/types';
 import { DocumentoQueryParams } from '@/services/documentosService';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { useCategorias } from '@/hooks/useCategorias';
+import { useTipos } from '@/hooks/useTipos';
 import { useAuth } from '@/hooks/useAuth';
 
-// Dynamic import to avoid SSR issues with react-pdf
 const DocumentPreview = dynamic(
   () => import('@/components/ui/DocumentPreview').then(mod => ({ default: mod.DocumentPreview })),
   { ssr: false }
 );
 
 const BuscarDocumentosPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const [searchResults, setSearchResults] = useState<Documento[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [selectedDocumento, setSelectedDocumento] = useState<Documento | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [filtros, setFiltros] = useState({
-    categoria: '',
-    departamento: '',
-    tipoMovimento: '',
-    dataInicio: '',
-    dataFim: ''
-  });
-  const [showFilters, setShowFilters] = useState(false);
 
   const { buscarPorTexto, baixar } = useDocumentos();
   const { user } = useAuth();
   const { categorias, carregarPorDepartamento } = useCategorias();
-  
+  const { tipos, carregar: carregarTipos } = useTipos();
+
   const userDepartmentId = user?.departamento?._id;
 
-  // Carregar categorias do departamento do usuário
   useEffect(() => {
     if (userDepartmentId) {
       carregarPorDepartamento(userDepartmentId, true);
+      carregarTipos({ limit: 100 });
     }
-  }, [userDepartmentId, carregarPorDepartamento]);
+  }, [userDepartmentId, carregarPorDepartamento, carregarTipos]);
+
+  const handleClearSearch = () => {
+    setSearchValue('');
+    setHasSearched(false);
+    setSearchResults([]);
+  };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchValue.trim()) return;
 
     setIsSearching(true);
     setHasSearched(true);
 
     try {
       const filtrosAPI: Omit<DocumentoQueryParams, 'q'> = {};
-      if (filtros.categoria) filtrosAPI.categoria = filtros.categoria;
-      if (filtros.tipoMovimento) filtrosAPI.tipoMovimento = filtros.tipoMovimento as 'enviado' | 'recebido' | 'interno';
+      if (activeFilters.categoria) filtrosAPI.categoria = activeFilters.categoria;
+      if (activeFilters.tipo) filtrosAPI.tipo = activeFilters.tipo;
+      if (activeFilters.tipoMovimento) filtrosAPI.tipoMovimento = activeFilters.tipoMovimento as 'enviado' | 'recebido' | 'interno';
+      if (activeFilters.dataEmissao_start) filtrosAPI.dataEmissaoInicio = `${activeFilters.dataEmissao_start}T00:00:00.000Z`;
+      if (activeFilters.dataEmissao_end) filtrosAPI.dataEmissaoFim = `${activeFilters.dataEmissao_end}T23:59:59.999Z`;
 
-      const response = await buscarPorTexto(searchQuery, filtrosAPI);
+      const response = await buscarPorTexto(searchValue, filtrosAPI);
       setSearchResults(response.data || []);
     } catch (err) {
       console.error('Erro na busca:', err);
@@ -76,16 +71,16 @@ const BuscarDocumentosPage = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
   };
 
-  const clearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setHasSearched(false);
+  const handleClearFilters = () => {
+    setActiveFilters({});
   };
 
   const handleDownload = async (documento: Documento) => {
@@ -96,35 +91,30 @@ const BuscarDocumentosPage = () => {
     }
   };
 
-  const handleView = (documento: Documento) => {
+  const handlePreview = (documento: Documento) => {
     setSelectedDocumento(documento);
     setIsPreviewOpen(true);
   };
+
+  const filterFields: SearchFilterField[] = useMemo(() => [
+    { key: 'categoria', label: 'Categoria', type: 'select', dataSource: 'categorias', placeholder: 'Todas as categorias' },
+    { key: 'tipo', label: 'Tipo', type: 'select', dataSource: 'tipos', placeholder: 'Todos os tipos' },
+    {
+      key: 'tipoMovimento', label: 'Movimento', type: 'select',
+      options: [
+        { value: 'enviado', label: 'Enviado' },
+        { value: 'recebido', label: 'Recebido' },
+        { value: 'interno', label: 'Interno' },
+      ],
+      placeholder: 'Todos'
+    },
+    { key: 'dataEmissao', label: 'Data de Emissão', type: 'daterange' },
+  ], []);
 
   const formatFileSize = (bytes: number) => {
     if (!bytes || isNaN(bytes)) return '0 KB';
     const mb = bytes / (1024 * 1024);
     return mb < 1 ? `${(bytes / 1024).toFixed(1)} KB` : `${mb.toFixed(1)} MB`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const getMovementBadge = (tipoMovimento: string, record: any) => {
-    const movementConfig: Record<string, { bg: string; text: string; label: string }> = {
-      'recebido': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Recebido' },
-      'enviado': { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-300', label: 'Enviado' },
-      'interno': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-300', label: 'Interno' }
-    };
-    
-    const config = movementConfig[tipoMovimento] || movementConfig.interno;
-    
-    return (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    );
   };
 
   const columns: TableColumn[] = [
@@ -136,9 +126,7 @@ const BuscarDocumentosPage = () => {
       maxWidth: '350px',
       render: (value, record: any) => (
         <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-          </div>
+          <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{value}</div>
             {record.descricao && (
@@ -146,7 +134,7 @@ const BuscarDocumentosPage = () => {
             )}
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center space-x-2 min-w-0">
               <span className="truncate">{record.arquivo?.originalName || 'Arquivo não encontrado'}</span>
-              <span className="flex-shrink-0">•</span>
+              <span className="flex-shrink-0">·</span>
               <span className="flex-shrink-0">{formatFileSize(record.arquivo?.size || 0)}</span>
             </div>
           </div>
@@ -159,10 +147,10 @@ const BuscarDocumentosPage = () => {
       width: 'w-32',
       render: (value: any) => (
         <div className="flex items-center space-x-2">
-          <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div>
             <div className="font-medium text-sm">{value?.nome || 'N/A'}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">{value?.codigo || ''}</div>
+            {value?.codigo && <div className="text-xs text-gray-500 dark:text-gray-400">{value.codigo}</div>}
           </div>
         </div>
       ),
@@ -171,171 +159,82 @@ const BuscarDocumentosPage = () => {
       key: 'categoria',
       title: 'Categoria',
       width: 'w-28',
-      render: (value: any) => (
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: value?.cor || '#6B7280' }}></div>
-          <span className="text-sm">{value?.nome || 'N/A'}</span>
+      render: (value: any, record: any) => (
+        <div className="space-y-0.5">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: value?.cor || '#6B7280' }} />
+            <span className="text-sm">{value?.nome || 'N/A'}</span>
+          </div>
+          {record.tipo && typeof record.tipo === 'object' && record.tipo.nome && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 pl-5 truncate">{record.tipo.nome}</div>
+          )}
         </div>
       ),
-    },
-    {
-      key: 'tipoMovimento',
-      title: 'Tipo',
-      width: 'w-24',
-      render: (value, record: any) => getMovementBadge(value, record),
     },
     {
       key: 'dataCriacao',
       title: 'Data',
       sortable: true,
-      width: 'w-24',
-      render: (value) => (
-        <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-          <Calendar className="w-4 h-4" />
-          <span>{formatDate(value)}</span>
+      width: 'w-28',
+      render: (value: string, record: any) => (
+        <div className="space-y-1">
+          {record.dataEmissao && (
+            <div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">Emissão</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {new Date(record.dataEmissao).toLocaleDateString('pt-BR')}
+              </div>
+            </div>
+          )}
+          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {new Date(value).toLocaleDateString('pt-BR')}
+          </div>
         </div>
       ),
     },
   ];
 
   const actions: TableAction[] = [
-    {
-      key: 'preview',
-      label: 'Pré-visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'download',
-      label: 'Download',
-      icon: <Download className="w-4 h-4" />,
-      onClick: handleDownload,
-      variant: 'success',
-    },
+    { key: 'preview',  label: 'Pré-visualizar', icon: <Eye className="w-4 h-4" />,     onClick: handlePreview },
+    { key: 'download', label: 'Download',        icon: <Download className="w-4 h-4" />, onClick: handleDownload, variant: 'success' },
   ];
 
   return (
     <UserLayout>
       <div className="space-y-6">
-        {/* Header de Busca */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Buscar Documentos</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Encontre documentos por título, descrição ou conteúdo</p>
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center self-start sm:self-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filtros
-            </button>
-          </div>
-
-          {/* Barra de Busca */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                placeholder="Digite sua busca aqui..."
-              />
-              {searchQuery && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <X className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-200" />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={!searchQuery.trim() || isSearching}
-              className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSearching ? 'Buscando...' : 'Buscar'}
-            </button>
-          </div>
-
-          {/* Filtros Avançados */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Filtros Avançados</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Categoria
-                  </label>
-                  <select
-                    value={filtros.categoria}
-                    onChange={(e) => setFiltros({...filtros, categoria: e.target.value})}
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Todas as categorias</option>
-                    {categorias.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Departamento
-                  </label>
-                  <input
-                    type="text"
-                    value={user?.departamento?.nome || ''}
-                    disabled
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                    title="Você só pode buscar documentos do seu departamento"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Tipo de Movimento
-                  </label>
-                  <select
-                    value={filtros.tipoMovimento}
-                    onChange={(e) => setFiltros({...filtros, tipoMovimento: e.target.value})}
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Todos os tipos</option>
-                    <option value="recebido">Recebido</option>
-                    <option value="enviado">Enviado</option>
-                    <option value="interno">Interno</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <SearchFilterBar
+          title="Buscar Documentos"
+          subtitle="Encontre documentos por título, descrição ou conteúdo"
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          onSearch={handleSearch}
+          showSearchButton={true}
+          onClearSearch={handleClearSearch}
+          searchPlaceholder="Digite sua busca aqui..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          categorias={categorias}
+          tipos={tipos}
+        />
 
         {/* Resultados */}
         {hasSearched && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 Resultados da Busca
                 {searchResults.length > 0 && (
-                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                    ({searchResults.length} documento{searchResults.length !== 1 ? 's' : ''} encontrado{searchResults.length !== 1 ? 's' : ''})
+                  <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                    — {searchResults.length} documento{searchResults.length !== 1 ? 's' : ''} encontrado{searchResults.length !== 1 ? 's' : ''}
                   </span>
                 )}
               </h2>
-              {searchQuery && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Buscando por: "<span className="font-medium">{searchQuery}</span>"
-                </p>
-              )}
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Buscando por: "<span className="font-medium text-gray-700 dark:text-gray-300">{searchValue}</span>"
+              </p>
             </div>
 
             <DataTable
@@ -345,12 +244,12 @@ const BuscarDocumentosPage = () => {
               loading={isSearching}
               emptyMessage={
                 <div className="text-center py-12">
-                  <Search className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  <Search className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                  <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">
                     Nenhum documento encontrado
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Tente usar termos diferentes ou verifique a ortografia
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Tente usar termos diferentes ou ajuste os filtros
                   </p>
                 </div>
               }
@@ -363,35 +262,22 @@ const BuscarDocumentosPage = () => {
 
         {/* Estado inicial */}
         {!hasSearched && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
-            <Search className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600 mb-6" />
-            <h2 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-3">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <Search className="mx-auto h-14 w-14 text-gray-200 dark:text-gray-700 mb-5" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Busque por documentos
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
               Use a barra de busca acima para encontrar documentos por título, descrição ou conteúdo.
-              Você também pode usar os filtros avançados para refinar sua busca.
+              Use os filtros para refinar por categoria, tipo ou período de emissão.
             </p>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              <p><strong>Dicas de busca:</strong></p>
-              <ul className="mt-2 space-y-1 text-left max-w-md mx-auto">
-                <li>• Use palavras-chave específicas</li>
-                <li>• Combine múltiplos termos</li>
-                <li>• Use aspas para frases exatas</li>
-                <li>• Utilize os filtros para resultados mais precisos</li>
-              </ul>
-            </div>
           </div>
         )}
 
-        {/* Modal de Preview */}
         {selectedDocumento && (
           <DocumentPreview
             isOpen={isPreviewOpen}
-            onClose={() => {
-              setIsPreviewOpen(false);
-              setSelectedDocumento(null);
-            }}
+            onClose={() => { setIsPreviewOpen(false); setSelectedDocumento(null); }}
             documento={selectedDocumento}
             onDownload={() => handleDownload(selectedDocumento)}
           />

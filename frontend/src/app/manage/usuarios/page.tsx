@@ -1,15 +1,15 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import ManageLayout from '@/components/ui/ManageLayout';
-import PageHeader from '@/components/ui/PageHeader';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
-import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import FormModal from '@/components/ui/FormModal';
 import UsuarioForm from '@/components/forms/UsuarioForm';
 import UsuarioDetail from '@/components/details/UsuarioDetail';
-import { Users, Edit, Trash2, Eye, Shield, User, Building2 } from 'lucide-react';
+import ModernButton from '@/components/ui/ModernButton';
+import { Users, Edit, Trash2, Eye, Shield, User, Building2, Plus } from 'lucide-react';
 import { Usuario, UsuarioQueryParams, UserRole } from '@/types';
 import { UsuariosService } from '@/services/usuariosService';
 import { useUsuarios } from '@/hooks/useUsuarios';
@@ -20,13 +20,13 @@ const UsuariosPage = () => {
   const router = useRouter();
   const { canManageUsers, loading: authLoading, user } = useAuth();
   const ROLE_LEVEL: Record<string, number> = { superadmin: 4, org_admin: 3, admin: 2, editor: 1, user: 0 };
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
-  const [showFilter, setShowFilter] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
-  // Verificar permissões - apenas admin pode gerenciar usuários
   useEffect(() => {
     if (!authLoading && !canManageUsers()) {
       router.push('/dashboard');
@@ -41,7 +41,7 @@ const UsuariosPage = () => {
     const queryParams: UsuarioQueryParams = {
       page: params.page || 1,
       limit: params.limit || 10,
-      ...(params.q && { q: params.q }),
+      ...(params.q?.trim() && { q: params.q.trim() }),
       ...(params.sortBy && { sortBy: params.sortBy, sortOrder: params.sortOrder || 'asc' }),
       ...(activeFilters.role && { role: activeFilters.role as UserRole }),
       ...(activeFilters.ativo !== undefined && activeFilters.ativo !== '' && { ativo: activeFilters.ativo === 'true' }),
@@ -55,7 +55,6 @@ const UsuariosPage = () => {
     };
   }, [activeFilters]);
 
-  // Hook de paginação com dados da API
   const {
     data: usuarios,
     loading,
@@ -64,128 +63,75 @@ const UsuariosPage = () => {
     paginationProps,
     refetch,
     goToPage
-  } = usePaginatedData({
-    fetchData: fetchUsuarios,
-    initialItemsPerPage: 10
-  });
+  } = usePaginatedData({ fetchData: fetchUsuarios, initialItemsPerPage: 10 });
 
-  useEffect(() => {
-    // O usePaginatedData já carrega os dados automaticamente
-  }, []);
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v);
   };
 
-  const filterFields: FilterField[] = [
-    {
-      id: 'role',
-      label: 'Função',
-      type: 'select',
-      placeholder: 'Todas as funções',
-      options: [
-        { id: 'org_admin', label: 'Adm. da Empresa', value: 'org_admin' },
-        { id: 'admin',     label: 'Administrador',   value: 'admin' },
-        { id: 'editor',    label: 'Editor',           value: 'editor' },
-        { id: 'user',      label: 'Utilizador',       value: 'user' },
-      ]
-    },
-    {
-      id: 'ativo',
-      label: 'Estado',
-      type: 'select',
-      placeholder: 'Todos os estados',
-      options: [
-        { id: 'true',  label: 'Ativo',   value: 'true' },
-        { id: 'false', label: 'Inativo', value: 'false' },
-      ]
-    },
-  ];
-
-  const handleFilterApply = (filters: Record<string, string>) => {
-    setActiveFilters(filters);
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
     goToPage(1);
   };
 
-  const handleFilterClear = () => {
+  const handleClearFilters = () => {
     setActiveFilters({});
     goToPage(1);
   };
 
-  const handleDelete = async (usuario: Usuario) => {
-    if (!confirm(`Deseja realmente excluir o usuário "${usuario.nome}"?`)) {
-      return;
-    }
+  const filterFields: SearchFilterField[] = useMemo(() => [
+    {
+      key: 'role', label: 'Função', type: 'select', placeholder: 'Todas as funções',
+      options: [
+        { value: 'org_admin', label: 'Adm. da Empresa' },
+        { value: 'admin',     label: 'Administrador' },
+        { value: 'editor',    label: 'Editor' },
+        { value: 'user',      label: 'Utilizador' },
+      ]
+    },
+    {
+      key: 'ativo', label: 'Estado', type: 'select', placeholder: 'Todos os estados',
+      options: [
+        { value: 'true',  label: 'Ativo' },
+        { value: 'false', label: 'Inativo' },
+      ]
+    },
+  ], []);
 
+  const handleDelete = async (usuario: Usuario) => {
+    if (!confirm(`Deseja realmente excluir o usuário "${usuario.nome}"?`)) return;
     try {
       await remover(usuario._id);
-      refetch(); // Recarregar lista
+      refetch();
     } catch (err) {
-      // Erro já tratado pelo hook
       console.error('Erro ao excluir usuário:', err);
     }
   };
 
-  const handleAdd = () => {
-    setSelectedUsuario(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEdit = (usuario: Usuario) => {
-    setSelectedUsuario(usuario);
-    setIsFormOpen(true);
-  };
-
-  const handleView = (usuario: Usuario) => {
-    setSelectedUsuario(usuario);
-    setIsDetailOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    refetch(); // Recarregar lista após sucesso
-    setIsFormOpen(false); // Fechar modal
-    setSelectedUsuario(null); // Limpar seleção
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedUsuario(null);
-  };
-
-  const handleDetailClose = () => {
-    setIsDetailOpen(false);
-    setSelectedUsuario(null);
-  };
+  const handleAdd = () => { setSelectedUsuario(null); setIsFormOpen(true); };
+  const handleEdit = (u: Usuario) => { setSelectedUsuario(u); setIsFormOpen(true); };
+  const handleView = (u: Usuario) => { setSelectedUsuario(u); setIsDetailOpen(true); };
+  const handleFormSuccess = () => { refetch(); setIsFormOpen(false); setSelectedUsuario(null); };
+  const handleFormClose = () => { setIsFormOpen(false); setSelectedUsuario(null); };
+  const handleDetailClose = () => { setIsDetailOpen(false); setSelectedUsuario(null); };
 
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
-      org_admin: {
-        label: 'Adm. da Empresa',
-        class: 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300',
-        icon: <Shield className="w-3 h-3" />
-      },
-      admin: {
-        label: 'Administrador',
-        class: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300',
-        icon: <Shield className="w-3 h-3" />
-      },
-      editor: {
-        label: 'Editor (Gerente)',
-        class: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300',
-        icon: <Users className="w-3 h-3" />
-      },
-      user: {
-        label: 'Utilizador',
-        class: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',
-        icon: <User className="w-3 h-3" />
-      },
+      org_admin: { label: 'Adm. da Empresa',  class: 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300', icon: <Shield className="w-3 h-3" /> },
+      admin:     { label: 'Administrador',     class: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300',             icon: <Shield className="w-3 h-3" /> },
+      editor:    { label: 'Editor (Gerente)',  class: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300',     icon: <Users className="w-3 h-3" /> },
+      user:      { label: 'Utilizador',        class: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',            icon: <User className="w-3 h-3" /> },
     };
-
-    const roleInfo = roleMap[role] ?? roleMap.user;
+    const info = roleMap[role] ?? roleMap.user;
     return (
-      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${roleInfo.class}`}>
-        {roleInfo.icon}
-        <span className="ml-1">{roleInfo.label}</span>
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${info.class}`}>
+        {info.icon}
+        <span className="ml-1">{info.label}</span>
       </span>
     );
   };
@@ -199,10 +145,8 @@ const UsuariosPage = () => {
       maxWidth: '300px',
       render: (value, record) => (
         <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-green-600 dark:text-green-400" />
-            </div>
+          <div className="w-8 h-8 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-green-600 dark:text-green-400" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{value}</div>
@@ -222,9 +166,7 @@ const UsuariosPage = () => {
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <div>
-            <div className="font-medium text-sm">{typeof value === 'string' ? value : value?.nome || 'N/A'}</div>
-          </div>
+          <div className="font-medium text-sm">{typeof value === 'string' ? value : value?.nome || 'N/A'}</div>
         </div>
       ),
     },
@@ -252,13 +194,11 @@ const UsuariosPage = () => {
       sortable: false,
       width: 'w-20',
       render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
+        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+          value
+            ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+            : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
+        }`}>
           {value ? 'Ativo' : 'Inativo'}
         </span>
       ),
@@ -266,25 +206,13 @@ const UsuariosPage = () => {
   ];
 
   const actions: TableAction<Usuario>[] = [
+    { key: 'view', label: 'Visualizar', icon: <Eye className="w-4 h-4" />, onClick: handleView },
     {
-      key: 'view',
-      label: 'Visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'edit',
-      label: 'Editar',
-      icon: <Edit className="w-4 h-4" />,
-      onClick: handleEdit,
+      key: 'edit', label: 'Editar', icon: <Edit className="w-4 h-4" />, onClick: handleEdit,
       hidden: (u: Usuario) => (ROLE_LEVEL[u.role] ?? 0) >= (ROLE_LEVEL[user?.role ?? 'user'] ?? 0),
     },
     {
-      key: 'delete',
-      label: 'Excluir',
-      icon: <Trash2 className="w-4 h-4" />,
-      onClick: handleDelete,
-      variant: 'danger',
+      key: 'delete', label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: handleDelete, variant: 'danger',
       hidden: (u: Usuario) => (ROLE_LEVEL[u.role] ?? 0) >= (ROLE_LEVEL[user?.role ?? 'user'] ?? 0),
     },
   ];
@@ -292,14 +220,22 @@ const UsuariosPage = () => {
   return (
     <ManageLayout>
       <div>
-        <PageHeader
+        <SearchFilterBar
           title="Usuários"
           subtitle="Gerencie os usuários do sistema"
-          onAdd={handleAdd}
-          onSearch={handleSearch}
-          onFilter={() => setShowFilter(true)}
-          addButtonText="Novo Usuário"
+          actionButton={
+            <ModernButton onClick={handleAdd} size="sm" className="flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Novo Usuário
+            </ModernButton>
+          }
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Pesquisar usuários..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
         />
 
         <DataTable
@@ -312,32 +248,18 @@ const UsuariosPage = () => {
           onSort={handleSort}
         />
 
-        {/* Formulário Modal */}
         <FormModal
           isOpen={isFormOpen}
           onClose={handleFormClose}
           title={selectedUsuario ? 'Editar Usuário' : 'Novo Usuário'}
         >
-          <UsuarioForm
-            usuario={selectedUsuario}
-            onSuccess={handleFormSuccess}
-          />
+          <UsuarioForm usuario={selectedUsuario} onSuccess={handleFormSuccess} />
         </FormModal>
 
-        {/* Modal de Detalhes */}
         <UsuarioDetail
           isOpen={isDetailOpen}
           onClose={handleDetailClose}
           usuario={selectedUsuario}
-        />
-
-        <FilterPanel
-          isOpen={showFilter}
-          onClose={() => setShowFilter(false)}
-          fields={filterFields}
-          onApply={handleFilterApply}
-          onClear={handleFilterClear}
-          initialValues={activeFilters}
         />
       </div>
     </ManageLayout>

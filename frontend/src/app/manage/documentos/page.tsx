@@ -1,39 +1,62 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import ManageLayout from '@/components/ui/ManageLayout';
-import PageHeader from '@/components/ui/PageHeader';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
-import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import DocumentoForm from '@/components/forms/DocumentoForm';
 import DocumentoDetail from '@/components/details/DocumentoDetail';
-import { FileText, Edit, Trash2, Eye, Download, Building2 } from 'lucide-react';
+import ModernButton from '@/components/ui/ModernButton';
+import { FileText, Edit, Trash2, Eye, Download, Building2, Plus } from 'lucide-react';
 
-// Dynamic import to avoid SSR issues with react-pdf
 const DocumentPreview = dynamic(
   () => import('@/components/ui/DocumentPreview').then(mod => ({ default: mod.DocumentPreview })),
   { ssr: false }
 );
+
 import { Documento } from '@/types';
 import { DocumentosService } from '@/services/documentosService';
 import type { DocumentoQueryParams } from '@/services/documentosService';
 import { useDocumentos } from '@/hooks/useDocumentos';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
+import { useDepartamentos } from '@/hooks/useDepartamentos';
+import { useCategorias } from '@/hooks/useCategorias';
+import { useTipos } from '@/hooks/useTipos';
+import { useUsuarios } from '@/hooks/useUsuarios';
+import { useAuth } from '@/hooks/useAuth';
 
 const DocumentosPage = () => {
+  const { user, isAdmin: checkIsAdmin, isEditor: checkIsEditor } = useAuth();
+  const isAdmin = checkIsAdmin();
+  const isEditor = checkIsEditor();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedDocumento, setSelectedDocumento] = useState<Documento | null>(null);
-  const [showFilter, setShowFilter] = useState(false);
+
+  const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
-  const {
-    buscarPorId,
-    remover,
-    baixar
-  } = useDocumentos();
+  const { buscarPorId, remover, baixar } = useDocumentos();
+  const { departamentos, carregar: carregarDepts } = useDepartamentos();
+  const { categorias, carregar: carregarCats } = useCategorias();
+  const { tipos, carregar: carregarTipos } = useTipos();
+  const { usuarios, carregar: carregarUsuarios } = useUsuarios();
+
+  // Load filter dropdown data on mount
+  useEffect(() => {
+    carregarDepts({ limit: 100 });
+    carregarCats({ limit: 100 });
+    carregarTipos({ limit: 100 });
+    // Load users filtered to the editor's department, or all for admin
+    if (isEditor && user?.departamento?._id) {
+      carregarUsuarios({ departamento: user.departamento._id, limit: 100 });
+    } else if (isAdmin) {
+      carregarUsuarios({ limit: 100 });
+    }
+  }, [isAdmin, isEditor, user?.departamento?._id, carregarDepts, carregarCats, carregarTipos, carregarUsuarios]);
 
   const fetchDocumentos = useCallback(async (params: {
     page?: number; limit?: number; q?: string; sortBy?: string; sortOrder?: 'asc' | 'desc';
@@ -41,12 +64,14 @@ const DocumentosPage = () => {
     const queryParams: DocumentoQueryParams = {
       page: params.page || 1,
       limit: params.limit || 10,
-      ...(params.q && { q: params.q }),
+      ...(params.q?.trim() && { q: params.q.trim() }),
       ...(params.sortBy && { sortBy: params.sortBy, sortOrder: params.sortOrder || 'asc' }),
       ...(activeFilters.tipoMovimento && { tipoMovimento: activeFilters.tipoMovimento as 'enviado' | 'recebido' | 'interno' }),
       ...(activeFilters.status && { status: activeFilters.status as 'ativo' | 'arquivado' }),
-      ...(activeFilters.dataCriacao_start && { dataInicio: `${activeFilters.dataCriacao_start}T00:00:00.000Z` }),
-      ...(activeFilters.dataCriacao_end && { dataFim: `${activeFilters.dataCriacao_end}T23:59:59.999Z` }),
+      ...(activeFilters.departamento && { departamento: activeFilters.departamento }),
+      ...(activeFilters.categoria && { categoria: activeFilters.categoria }),
+      ...(activeFilters.tipo && { tipo: activeFilters.tipo }),
+      ...(activeFilters.usuario && { usuario: activeFilters.usuario }),
       ...(activeFilters.dataEmissao_start && { dataEmissaoInicio: `${activeFilters.dataEmissao_start}T00:00:00.000Z` }),
       ...(activeFilters.dataEmissao_end && { dataEmissaoFim: `${activeFilters.dataEmissao_end}T23:59:59.999Z` }),
     };
@@ -59,7 +84,6 @@ const DocumentosPage = () => {
     };
   }, [activeFilters]);
 
-  // Hook de paginação com dados da API
   const {
     data: documentos,
     loading,
@@ -68,73 +92,82 @@ const DocumentosPage = () => {
     paginationProps,
     refetch,
     goToPage
-  } = usePaginatedData({
-    fetchData: fetchDocumentos,
-    initialItemsPerPage: 10
-  });
+  } = usePaginatedData({ fetchData: fetchDocumentos, initialItemsPerPage: 10 });
 
-  useEffect(() => {
-    // O usePaginatedData já carrega os dados automaticamente
-  }, []);
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
+  const handleSearch = () => {
+    setSearchQuery(searchValue);
   };
 
-  const filterFields: FilterField[] = [
-    {
-      id: 'tipoMovimento',
-      label: 'Tipo de Movimento',
-      type: 'select',
-      placeholder: 'Todos os tipos',
-      options: [
-        { id: 'enviado',  label: 'Enviado',  value: 'enviado' },
-        { id: 'recebido', label: 'Recebido', value: 'recebido' },
-        { id: 'interno',  label: 'Interno',  value: 'interno' },
-      ]
-    },
-    {
-      id: 'status',
-      label: 'Estado',
-      type: 'select',
-      placeholder: 'Todos os estados',
-      options: [
-        { id: 'ativo',      label: 'Ativo',      value: 'ativo' },
-        { id: 'arquivado',  label: 'Arquivado',   value: 'arquivado' },
-      ]
-    },
-    {
-      id: 'dataCriacao',
-      label: 'Período de Criação',
-      type: 'daterange',
-    },
-    {
-      id: 'dataEmissao',
-      label: 'Período de Emissão',
-      type: 'daterange',
-    }
-  ];
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v); // live search
+  };
 
-  const handleFilterApply = (filters: Record<string, string>) => {
-    setActiveFilters(filters);
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) {
+        next[key] = value;
+      } else {
+        delete next[key];
+      }
+      return next;
+    });
     goToPage(1);
   };
 
-  const handleFilterClear = () => {
+  const handleClearFilters = () => {
     setActiveFilters({});
     goToPage(1);
   };
 
-  const handleDelete = async (documento: Documento) => {
-    if (!confirm(`Deseja realmente excluir o documento "${documento.titulo}"?`)) {
-      return;
+  // Role-aware filter fields
+  const filterFields: SearchFilterField[] = useMemo(() => {
+    const fields: SearchFilterField[] = [];
+
+    if (isAdmin) {
+      fields.push({ key: 'departamento', label: 'Departamento', type: 'select', dataSource: 'departamentos', placeholder: 'Todos os depts.' });
     }
 
+    if (isEditor) {
+      fields.push({ key: 'usuario', label: 'Utilizador', type: 'select', dataSource: 'usuarios', placeholder: 'Todos os utilizadores' });
+    }
+
+    fields.push(
+      { key: 'categoria', label: 'Categoria', type: 'select', dataSource: 'categorias', placeholder: 'Todas as categorias' },
+      { key: 'tipo', label: 'Tipo', type: 'select', dataSource: 'tipos', placeholder: 'Todos os tipos' },
+      {
+        key: 'tipoMovimento', label: 'Movimento', type: 'select',
+        options: [
+          { value: 'enviado', label: 'Enviado' },
+          { value: 'recebido', label: 'Recebido' },
+          { value: 'interno', label: 'Interno' },
+        ],
+        placeholder: 'Todos'
+      },
+      { key: 'dataEmissao', label: 'Data de Emissão', type: 'daterange' },
+    );
+
+    if (isAdmin) {
+      fields.push({
+        key: 'status', label: 'Estado', type: 'select',
+        options: [
+          { value: 'ativo', label: 'Ativo' },
+          { value: 'arquivado', label: 'Arquivado' },
+        ],
+        placeholder: 'Todos'
+      });
+    }
+
+    return fields;
+  }, [isAdmin, isEditor]);
+
+  const handleDelete = async (documento: Documento) => {
+    if (!confirm(`Deseja realmente excluir o documento "${documento.titulo}"?`)) return;
     try {
       await remover(documento._id);
-      refetch(); // Recarregar lista
+      refetch();
     } catch (err) {
-      // Erro já tratado pelo hook
       console.error('Erro ao excluir documento:', err);
     }
   };
@@ -154,44 +187,24 @@ const DocumentosPage = () => {
 
   const handleEdit = async (documento: Documento) => {
     try {
-      // Buscar documento completo com populate
       const documentoCompleto = await buscarPorId(documento._id);
       setSelectedDocumento(documentoCompleto);
       setIsFormOpen(true);
     } catch (error) {
-      console.error('Erro ao buscar documento:', error);
-      // Fallback: usar dados da lista
       setSelectedDocumento(documento);
       setIsFormOpen(true);
     }
-  };
-
-  const handleFormSuccess = () => {
-    refetch(); // Recarregar lista após sucesso
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedDocumento(null);
   };
 
   const handleView = async (documento: Documento) => {
     try {
-      // Buscar documento completo com populate para visualização
       const documentoCompleto = await buscarPorId(documento._id);
       setSelectedDocumento(documentoCompleto);
       setIsDetailOpen(true);
     } catch (error) {
-      console.error('Erro ao buscar documento:', error);
-      // Fallback: usar dados da lista
       setSelectedDocumento(documento);
       setIsDetailOpen(true);
     }
-  };
-
-  const handleDetailClose = () => {
-    setIsDetailOpen(false);
-    setSelectedDocumento(null);
   };
 
   const handlePreview = (documento: Documento) => {
@@ -306,51 +319,37 @@ const DocumentosPage = () => {
   ];
 
   const actions: TableAction[] = [
-    {
-      key: 'preview',
-      label: 'Pré-visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handlePreview,
-    },
-    {
-      key: 'download',
-      label: 'Download',
-      icon: <Download className="w-4 h-4" />,
-      onClick: handleDownload,
-      variant: 'success',
-    },
-    {
-      key: 'view',
-      label: 'Detalhes',
-      icon: <FileText className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'edit',
-      label: 'Editar',
-      icon: <Edit className="w-4 h-4" />,
-      onClick: handleEdit,
-    },
-    {
-      key: 'delete',
-      label: 'Excluir',
-      icon: <Trash2 className="w-4 h-4" />,
-      onClick: handleDelete,
-      variant: 'danger',
-    },
+    { key: 'preview',  label: 'Pré-visualizar', icon: <Eye className="w-4 h-4" />,    onClick: handlePreview },
+    { key: 'download', label: 'Download',        icon: <Download className="w-4 h-4" />, onClick: handleDownload, variant: 'success' },
+    { key: 'view',     label: 'Detalhes',        icon: <FileText className="w-4 h-4" />, onClick: handleView },
+    { key: 'edit',     label: 'Editar',          icon: <Edit className="w-4 h-4" />,    onClick: handleEdit },
+    { key: 'delete',   label: 'Excluir',         icon: <Trash2 className="w-4 h-4" />,  onClick: handleDelete, variant: 'danger' },
   ];
 
   return (
     <ManageLayout>
       <div>
-        <PageHeader
+        <SearchFilterBar
           title="Documentos"
           subtitle="Gerencie todos os documentos do sistema"
-          onAdd={handleAdd}
+          actionButton={
+            <ModernButton onClick={handleAdd} size="sm" className="flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Novo Documento
+            </ModernButton>
+          }
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           onSearch={handleSearch}
-          onFilter={() => setShowFilter(true)}
-          addButtonText="Novo Documento"
-          searchPlaceholder="Pesquisar documentos..."
+          searchPlaceholder="Pesquisar por título, descrição, remetente..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          departamentos={departamentos}
+          categorias={categorias}
+          tipos={tipos}
+          usuarios={usuarios}
         />
 
         <DataTable
@@ -365,40 +364,26 @@ const DocumentosPage = () => {
 
         <DocumentoForm
           isOpen={isFormOpen}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
+          onClose={() => { setIsFormOpen(false); setSelectedDocumento(null); }}
+          onSuccess={refetch}
           documento={selectedDocumento}
         />
 
-        {/* Modal de Detalhes */}
         <DocumentoDetail
           isOpen={isDetailOpen}
-          onClose={handleDetailClose}
+          onClose={() => { setIsDetailOpen(false); setSelectedDocumento(null); }}
           documento={selectedDocumento}
           onDownload={handleDownload}
         />
 
-        {/* Modal de Preview */}
         {selectedDocumento && (
           <DocumentPreview
             isOpen={isPreviewOpen}
-            onClose={() => {
-              setIsPreviewOpen(false);
-              setSelectedDocumento(null);
-            }}
+            onClose={() => { setIsPreviewOpen(false); setSelectedDocumento(null); }}
             documento={selectedDocumento}
             onDownload={() => handleDownload(selectedDocumento)}
           />
         )}
-
-        <FilterPanel
-          isOpen={showFilter}
-          onClose={() => setShowFilter(false)}
-          fields={filterFields}
-          onApply={handleFilterApply}
-          onClear={handleFilterClear}
-          initialValues={activeFilters}
-        />
       </div>
     </ManageLayout>
   );

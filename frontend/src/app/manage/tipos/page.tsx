@@ -1,14 +1,14 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ManageLayout from '@/components/ui/ManageLayout';
-import PageHeader from '@/components/ui/PageHeader';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
 import FormModal from '@/components/ui/FormModal';
-import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import TipoForm from '@/components/forms/TipoForm';
 import TipoDetail from '@/components/details/TipoDetail';
-import { Edit, Trash2, Eye, File } from 'lucide-react';
+import ModernButton from '@/components/ui/ModernButton';
+import { Edit, Trash2, Eye, File, Plus } from 'lucide-react';
 import { TipoDocumento } from '@/types';
 import { useTipos } from '@/hooks/useTipos';
 import { usePaginatedData } from '@/hooks/usePaginatedData';
@@ -19,257 +19,119 @@ import { useAuth } from '@/hooks/useAuth';
 const TiposPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedTipo, setSelectedTipo] = useState<TipoDocumento | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
-  
-  const { user, isAdmin, loading: authLoading } = useAuth();
-  const {
-    carregarPaginado,
-    carregarPorDepartamento,
-    remover
-  } = useTipos();
+  const [searchValue, setSearchValue] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
+  const { user, isAdmin: checkIsAdmin, loading: authLoading } = useAuth();
+  const isAdmin = checkIsAdmin();
+
+  const { carregarPaginado, carregarPorDepartamento, remover } = useTipos();
   const { categorias, carregar: carregarCategorias, carregarPorDepartamento: carregarCategoriasPorDep } = useCategorias();
   const { departamentos, carregar: carregarDepartamentos } = useDepartamentos();
-  const [categoriasLoaded, setCategoriasLoaded] = useState(false);
-  const [departamentosLoaded, setDepartamentosLoaded] = useState(false);
 
-  // Não renderizar até que o usuário esteja carregado
-  if (authLoading) {
-    return (
-      <ManageLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
-          </div>
-        </div>
-      </ManageLayout>
-    );
-  }
-
-  // Memorizar a função fetchData para evitar re-renderizações
   const fetchData = useCallback(async (params: any) => {
-    // Combinar params com filtros ativos
-    const combinedParams = {
-      ...params,
-      ...activeFilters
-    };
-
-    // Sanitizar: garantir que todos os valores são primitivos
-    const sanitizedParams: Record<string, any> = {};
-    Object.entries(combinedParams).forEach(([key, value]) => {
-      if (
-        typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean' ||
-        value === undefined ||
-        value === null
-      ) {
-        sanitizedParams[key] = value;
-      } else if (typeof value === 'object' && value !== null && 'value' in value) {
-        // Caso venha de select customizado (ex: { value: 'abc', label: 'Nome' })
-        sanitizedParams[key] = value.value;
+    const sanitized: Record<string, any> = {};
+    const combined = { ...params, ...activeFilters };
+    Object.entries(combined).forEach(([k, v]) => {
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === undefined || v === null) {
+        sanitized[k] = v;
+      } else if (typeof v === 'object' && v !== null && 'value' in (v as any)) {
+        sanitized[k] = (v as any).value;
       }
-      // Ignora outros tipos
     });
-
-    // Se for editor OU se admin filtrou por departamento específico, usar endpoint de departamento
-    const departamentoId = !isAdmin() && user?.departamento?._id 
-      ? user.departamento._id 
-      : sanitizedParams.departamento;
-
-    if (departamentoId) {
-      // Remover departamento dos params já que vai na URL
-      const { departamento, ...restParams } = sanitizedParams;
-      return carregarPorDepartamento(departamentoId, restParams);
+    if (typeof sanitized.q === 'string') {
+      const trimmed = sanitized.q.trim();
+      if (trimmed) { sanitized.q = trimmed; } else { delete sanitized.q; }
     }
 
-    // Admin sem filtro de departamento - vê todos
-    return carregarPaginado(sanitizedParams);
+    const departamentoId = !isAdmin && user?.departamento?._id
+      ? user.departamento._id
+      : sanitized.departamento;
+
+    if (departamentoId) {
+      const { departamento, ...rest } = sanitized;
+      return carregarPorDepartamento(departamentoId, rest);
+    }
+    return carregarPaginado(sanitized);
   }, [isAdmin, user?.departamento?._id, carregarPorDepartamento, carregarPaginado, activeFilters]);
 
-  // Hook de paginação com dados da API
   const {
     data: tipos,
     loading,
-    error,
-    searchQuery,
     setSearchQuery,
     handleSort,
     paginationProps,
-    refetch
-  } = usePaginatedData({
-    fetchData,
-    initialItemsPerPage: 10
-  });
+    refetch,
+    goToPage
+  } = usePaginatedData({ fetchData, initialItemsPerPage: 10 });
 
   useEffect(() => {
-    // Carregar categorias apenas uma vez baseado no role
-    if (categoriasLoaded || !user) return;
-    
-    const loadCategorias = async () => {
-      try {
-        if (isAdmin()) {
-          await carregarCategorias();
-        } else if (user?.departamento?._id) {
-          await carregarCategoriasPorDep(user.departamento._id, true);
-        }
-        setCategoriasLoaded(true);
-      } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
-      }
-    };
-    
-    loadCategorias();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.departamento?._id]);
-
-  useEffect(() => {
-    // Carregar departamentos para admin
-    if (departamentosLoaded || !isAdmin() || !user) return;
-    
-    const loadDepartamentos = async () => {
-      try {
-        await carregarDepartamentos();
-        setDepartamentosLoaded(true);
-      } catch (error) {
-        console.error('Erro ao carregar departamentos:', error);
-      }
-    };
-    
-    loadDepartamentos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Configuração dos filtros
-  const filterFields: FilterField[] = isAdmin() ? [
-    {
-      id: 'departamento',
-      label: 'Departamento',
-      type: 'select',
-      placeholder: 'Todos os departamentos',
-      options: departamentos.map(dept => ({
-        id: dept._id,
-        label: dept.nome,
-        value: dept._id
-      }))
-    },
-    {
-      id: 'categoria',
-      label: 'Categoria',
-      type: 'select',
-      placeholder: 'Todas as categorias',
-      options: categorias
-        .filter(cat => {
-          // Se houver filtro de departamento ativo, mostrar só categorias desse departamento
-          if (activeFilters.departamento) {
-            const catDept = typeof cat.departamento === 'string' ? cat.departamento : cat.departamento?._id;
-            return catDept === activeFilters.departamento;
-          }
-          return true;
-        })
-        .map(cat => ({
-          id: cat._id,
-          label: cat.nome,
-          value: cat._id
-        }))
-    },
-    {
-      id: 'ativo',
-      label: 'Status',
-      type: 'select',
-      placeholder: 'Todos',
-      options: [
-        { id: 'true', label: 'Ativos', value: 'true' },
-        { id: 'false', label: 'Inativos', value: 'false' }
-      ]
+    if (!user) return;
+    if (isAdmin) {
+      carregarCategorias();
+      carregarDepartamentos();
+    } else if (user?.departamento?._id) {
+      carregarCategoriasPorDep(user.departamento._id, true);
     }
-  ] : [
-    {
-      id: 'categoria',
-      label: 'Categoria',
-      type: 'select',
-      placeholder: 'Todas as categorias',
-      options: categorias.map(cat => ({
-        id: cat._id,
-        label: cat.nome,
-        value: cat._id
-      }))
-    },
-    {
-      id: 'ativo',
-      label: 'Status',
-      type: 'select',
-      placeholder: 'Todos',
-      options: [
-        { id: 'true', label: 'Ativos', value: 'true' },
-        { id: 'false', label: 'Inativos', value: 'false' }
-      ]
-    }
-  ];
+  }, [user?.departamento?._id, isAdmin]);
 
-  const handleApplyFilters = (filters: Record<string, any>) => {
-    console.log('📋 Filtros aplicados:', filters);
-    setActiveFilters(filters);
-    // O refetch será disparado automaticamente pelo useEffect do usePaginatedData
-    // quando activeFilters mudar (porque fetchData depende de activeFilters)
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
+    goToPage(1);
   };
 
   const handleClearFilters = () => {
     setActiveFilters({});
-    // O refetch será disparado automaticamente
+    goToPage(1);
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-  };
+  const filteredCategorias = useMemo(() =>
+    activeFilters.departamento
+      ? categorias.filter(c => {
+          const catDept = typeof c.departamento === 'string' ? c.departamento : c.departamento?._id;
+          return catDept === activeFilters.departamento;
+        })
+      : categorias,
+  [categorias, activeFilters.departamento]);
+
+  const filterFields: SearchFilterField[] = useMemo(() => {
+    const fields: SearchFilterField[] = [];
+    if (isAdmin) {
+      fields.push({ key: 'departamento', label: 'Departamento', type: 'select', dataSource: 'departamentos', placeholder: 'Todos os depts.' });
+    }
+    fields.push(
+      { key: 'categoria', label: 'Categoria', type: 'select', dataSource: 'categorias', placeholder: 'Todas as categorias' },
+      { key: 'ativo', label: 'Estado', type: 'select', placeholder: 'Todos', options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }] },
+    );
+    return fields;
+  }, [isAdmin]);
 
   const handleDelete = async (tipo: TipoDocumento) => {
-    if (!confirm(`Deseja realmente excluir o tipo "${tipo.nome}"?`)) {
-      return;
-    }
-
+    if (!confirm(`Deseja realmente excluir o tipo "${tipo.nome}"?`)) return;
     try {
       await remover(tipo._id);
-      refetch(); // Recarregar lista
+      refetch();
     } catch (err) {
-      // Erro já tratado pelo hook
       console.error('Erro ao excluir tipo:', err);
     }
   };
 
-  const handleAdd = () => {
-    setSelectedTipo(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEdit = (tipo: TipoDocumento) => {
-    setSelectedTipo(tipo);
-    setIsFormOpen(true);
-  };
-
-  const handleView = (tipo: TipoDocumento) => {
-    setSelectedTipo(tipo);
-    setIsDetailOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    refetch(); // Recarregar lista após sucesso
-    setIsFormOpen(false); // Fechar modal
-    setSelectedTipo(null); // Limpar seleção
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedTipo(null);
-  };
-
-  const handleDetailClose = () => {
-    setIsDetailOpen(false);
-    setSelectedTipo(null);
-  };
+  const handleAdd = () => { setSelectedTipo(null); setIsFormOpen(true); };
+  const handleEdit = (t: TipoDocumento) => { setSelectedTipo(t); setIsFormOpen(true); };
+  const handleView = (t: TipoDocumento) => { setSelectedTipo(t); setIsDetailOpen(true); };
+  const handleFormSuccess = () => { refetch(); setIsFormOpen(false); setSelectedTipo(null); };
+  const handleFormClose = () => { setIsFormOpen(false); setSelectedTipo(null); };
+  const handleDetailClose = () => { setIsDetailOpen(false); setSelectedTipo(null); };
 
   const columns: TableColumn<TipoDocumento>[] = [
     {
@@ -291,9 +153,7 @@ const TiposPage = () => {
       maxWidth: '300px',
       render: (value, record) => (
         <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <File className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-          </div>
+          <File className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-gray-100">{value}</div>
             {record.descricao && (
@@ -310,20 +170,12 @@ const TiposPage = () => {
       title: 'Categoria',
       sortable: false,
       width: 'w-48',
-      render: (value, record) => {
-        const categoria = typeof record.categoria === 'string' 
-          ? null 
-          : record.categoria;
-        
+      render: (_value, record) => {
+        const categoria = typeof record.categoria === 'string' ? null : record.categoria;
         return categoria ? (
           <div className="flex items-center space-x-2">
-            <div 
-              className="w-3 h-3 rounded-full flex-shrink-0" 
-              style={{ backgroundColor: categoria.cor || '#6B7280' }}
-            />
-            <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
-              {categoria.nome}
-            </span>
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: categoria.cor || '#6B7280' }} />
+            <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{categoria.nome}</span>
           </div>
         ) : (
           <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
@@ -336,13 +188,11 @@ const TiposPage = () => {
       sortable: true,
       width: 'w-20',
       render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
+        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+          value
+            ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+            : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
+        }`}>
           {value ? 'Ativo' : 'Inativo'}
         </span>
       ),
@@ -361,38 +211,45 @@ const TiposPage = () => {
   ];
 
   const actions: TableAction<TipoDocumento>[] = [
-    {
-      key: 'view',
-      label: 'Visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'edit',
-      label: 'Editar',
-      icon: <Edit className="w-4 h-4" />,
-      onClick: handleEdit,
-    },
-    {
-      key: 'delete',
-      label: 'Excluir',
-      icon: <Trash2 className="w-4 h-4" />,
-      onClick: handleDelete,
-      variant: 'danger',
-    },
+    { key: 'view',   label: 'Visualizar', icon: <Eye className="w-4 h-4" />,    onClick: handleView },
+    { key: 'edit',   label: 'Editar',     icon: <Edit className="w-4 h-4" />,   onClick: handleEdit },
+    { key: 'delete', label: 'Excluir',    icon: <Trash2 className="w-4 h-4" />, onClick: handleDelete, variant: 'danger' },
   ];
+
+  if (authLoading) {
+    return (
+      <ManageLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+          </div>
+        </div>
+      </ManageLayout>
+    );
+  }
 
   return (
     <ManageLayout>
       <div>
-        <PageHeader
+        <SearchFilterBar
           title="Tipos de Documento"
           subtitle="Gerencie os tipos de documentos permitidos"
-          onAdd={handleAdd}
-          onSearch={handleSearch}
-          onFilter={() => setIsFilterOpen(true)}
-          addButtonText="Novo Tipo"
+          actionButton={
+            <ModernButton onClick={handleAdd} size="sm" className="flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Novo Tipo
+            </ModernButton>
+          }
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Pesquisar tipos..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          departamentos={departamentos}
+          categorias={filteredCategorias}
         />
 
         <DataTable
@@ -405,29 +262,14 @@ const TiposPage = () => {
           pagination={paginationProps}
         />
 
-        {/* Painel de Filtros */}
-        <FilterPanel
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          fields={filterFields}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          initialValues={activeFilters}
-        />
-
-        {/* Formulário Modal */}
         <FormModal
           isOpen={isFormOpen}
           onClose={handleFormClose}
           title={selectedTipo ? 'Editar Tipo' : 'Novo Tipo'}
         >
-          <TipoForm
-            tipo={selectedTipo}
-            onSuccess={handleFormSuccess}
-          />
+          <TipoForm tipo={selectedTipo} onSuccess={handleFormSuccess} />
         </FormModal>
 
-        {/* Modal de Detalhes */}
         <TipoDetail
           isOpen={isDetailOpen}
           onClose={handleDetailClose}

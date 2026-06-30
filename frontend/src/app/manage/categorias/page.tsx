@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ManageLayout from '@/components/ui/ManageLayout';
-import PageHeader from '@/components/ui/PageHeader';
+import SearchFilterBar, { SearchFilterField } from '@/components/ui/SearchFilterBar';
 import DataTable, { TableColumn, TableAction } from '@/components/ui/DataTable';
 import FormModal from '@/components/ui/FormModal';
-import FilterPanel, { FilterField } from '@/components/ui/FilterPanel';
 import CategoriaForm from '@/components/forms/CategoriaForm';
 import CategoriaDetail from '@/components/details/CategoriaDetail';
+import ModernButton from '@/components/ui/ModernButton';
 import {
-  FolderOpen, Edit, Trash2, Eye,
+  FolderOpen, Edit, Trash2, Eye, Plus,
   FileText, Mail, BarChart3, Calculator, Receipt, FileCheck,
   Table2, Banknote, Scale, Tag, Folder, type LucideIcon,
 } from 'lucide-react';
@@ -42,6 +42,7 @@ function CategoriaIcone({ icone, cor }: { icone?: string; cor?: string }) {
     </div>
   );
 }
+
 import { CategoriaDocumento, CategoriaQueryParams } from '@/types';
 import { CategoriasService } from '@/services/categoriasService';
 import { useCategorias } from '@/hooks/useCategorias';
@@ -50,18 +51,18 @@ import { usePaginatedData } from '@/hooks/usePaginatedData';
 import { useAuth } from '@/hooks/useAuth';
 
 const CategoriasPage = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin: checkIsAdmin } = useAuth();
+  const isAdmin = checkIsAdmin();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaDocumento | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const { remover } = useCategorias();
-
   const { departamentos, carregar: carregarDepartamentos } = useDepartamentos();
 
-  // Se for editor, restringir ao seu departamento
   const departmentId = user?.role === 'editor' && user?.departamento
     ? (typeof user.departamento === 'string' ? user.departamento : user.departamento._id)
     : undefined;
@@ -72,8 +73,7 @@ const CategoriasPage = () => {
     const queryParams: CategoriaQueryParams = {
       page: params.page || 1,
       limit: params.limit || 10,
-      ...(params.q && { q: params.q }),
-      // Editor fica sempre restrito ao seu departamento; admin pode filtrar via painel
+      ...(params.q?.trim() && { q: params.q.trim() }),
       ...(departmentId ? { departamento: departmentId } : activeFilters.departamento && { departamento: activeFilters.departamento }),
       ...(activeFilters.ativo !== undefined && activeFilters.ativo !== '' && { ativo: activeFilters.ativo === 'true' }),
     };
@@ -86,65 +86,31 @@ const CategoriasPage = () => {
     };
   }, [activeFilters, departmentId]);
 
-  // Hook de paginação com dados da API
   const {
     data: categorias,
     loading,
-    error,
     setSearchQuery,
     handleSort,
     paginationProps,
     refetch,
     goToPage
-  } = usePaginatedData({
-    fetchData,
-    initialItemsPerPage: 10
-  });
+  } = usePaginatedData({ fetchData, initialItemsPerPage: 10 });
 
   useEffect(() => {
-    if (isAdmin()) {
-      carregarDepartamentos();
-    }
+    if (isAdmin) carregarDepartamentos();
   }, [isAdmin, carregarDepartamentos]);
 
-  // Configuração dos filtros (apenas para Admin)
-  const filterFields: FilterField[] = isAdmin() ? [
-    {
-      id: 'departamento',
-      label: 'Departamento',
-      type: 'select',
-      placeholder: 'Todos os departamentos',
-      options: departamentos.map(dept => ({
-        id: dept._id,
-        label: dept.nome,
-        value: dept._id
-      }))
-    },
-    {
-      id: 'ativo',
-      label: 'Status',
-      type: 'select',
-      placeholder: 'Todos',
-      options: [
-        { id: 'true', label: 'Ativos', value: 'true' },
-        { id: 'false', label: 'Inativos', value: 'false' }
-      ]
-    }
-  ] : [
-    {
-      id: 'ativo',
-      label: 'Status',
-      type: 'select',
-      placeholder: 'Todos',
-      options: [
-        { id: 'true', label: 'Ativos', value: 'true' },
-        { id: 'false', label: 'Inativos', value: 'false' }
-      ]
-    }
-  ];
+  const handleSearchChange = (v: string) => {
+    setSearchValue(v);
+    setSearchQuery(v);
+  };
 
-  const handleApplyFilters = (filters: Record<string, string>) => {
-    setActiveFilters(filters);
+  const handleFilterChange = (key: string, value: string) => {
+    setActiveFilters(prev => {
+      const next = { ...prev };
+      if (value) { next[key] = value; } else { delete next[key]; }
+      return next;
+    });
     goToPage(1);
   };
 
@@ -153,62 +119,34 @@ const CategoriasPage = () => {
     goToPage(1);
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-  };
+  const filterFields: SearchFilterField[] = useMemo(() => {
+    const fields: SearchFilterField[] = [];
+    if (isAdmin) {
+      fields.push({ key: 'departamento', label: 'Departamento', type: 'select', dataSource: 'departamentos', placeholder: 'Todos os depts.' });
+    }
+    fields.push({
+      key: 'ativo', label: 'Estado', type: 'select', placeholder: 'Todos',
+      options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }]
+    });
+    return fields;
+  }, [isAdmin]);
 
   const handleDelete = async (categoria: CategoriaDocumento) => {
-    if (!confirm(`Deseja realmente excluir a categoria "${categoria.nome}"?`)) {
-      return;
-    }
-
+    if (!confirm(`Deseja realmente excluir a categoria "${categoria.nome}"?`)) return;
     try {
       await remover(categoria._id);
-      refetch(); // Recarregar lista
+      refetch();
     } catch (err) {
-      // Erro já tratado pelo hook
       console.error('Erro ao excluir categoria:', err);
     }
   };
 
-  const handleAdd = () => {
-    setSelectedCategoria(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEdit = (categoria: CategoriaDocumento) => {
-    setSelectedCategoria(categoria);
-    setIsFormOpen(true);
-  };
-
-  const handleView = (categoria: CategoriaDocumento) => {
-    setSelectedCategoria(categoria);
-    setIsDetailOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    refetch(); // Recarregar lista após sucesso
-    setIsFormOpen(false); // Fechar modal
-    setSelectedCategoria(null); // Limpar seleção
-  };
-
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedCategoria(null);
-  };
-
-  const handleDetailClose = () => {
-    setIsDetailOpen(false);
-    setSelectedCategoria(null);
-  };
-
-  const getColorDisplay = (cor?: string) => {
-    if (!cor) return { bg: '#6b7280', text: '#fff' }; // gray por padrão
-    return {
-      bg: cor,
-      text: '#fff' // texto branco para contraste
-    };
-  };
+  const handleAdd = () => { setSelectedCategoria(null); setIsFormOpen(true); };
+  const handleEdit = (c: CategoriaDocumento) => { setSelectedCategoria(c); setIsFormOpen(true); };
+  const handleView = (c: CategoriaDocumento) => { setSelectedCategoria(c); setIsDetailOpen(true); };
+  const handleFormSuccess = () => { refetch(); setIsFormOpen(false); setSelectedCategoria(null); };
+  const handleFormClose = () => { setIsFormOpen(false); setSelectedCategoria(null); };
+  const handleDetailClose = () => { setIsDetailOpen(false); setSelectedCategoria(null); };
 
   const columns: TableColumn<CategoriaDocumento>[] = [
     {
@@ -248,13 +186,11 @@ const CategoriasPage = () => {
       sortable: false,
       width: 'w-20',
       render: (value) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-            value
-              ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-          }`}
-        >
+        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+          value
+            ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+            : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
+        }`}>
           {value ? 'Ativo' : 'Inativo'}
         </span>
       ),
@@ -273,38 +209,31 @@ const CategoriasPage = () => {
   ];
 
   const actions: TableAction<CategoriaDocumento>[] = [
-    {
-      key: 'view',
-      label: 'Visualizar',
-      icon: <Eye className="w-4 h-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'edit',
-      label: 'Editar',
-      icon: <Edit className="w-4 h-4" />,
-      onClick: handleEdit,
-    },
-    {
-      key: 'delete',
-      label: 'Excluir',
-      icon: <Trash2 className="w-4 h-4" />,
-      onClick: handleDelete,
-      variant: 'danger',
-    },
+    { key: 'view',   label: 'Visualizar', icon: <Eye className="w-4 h-4" />,    onClick: handleView },
+    { key: 'edit',   label: 'Editar',     icon: <Edit className="w-4 h-4" />,   onClick: handleEdit },
+    { key: 'delete', label: 'Excluir',    icon: <Trash2 className="w-4 h-4" />, onClick: handleDelete, variant: 'danger' },
   ];
 
   return (
     <ManageLayout>
       <div>
-        <PageHeader
+        <SearchFilterBar
           title="Categorias"
           subtitle="Gerencie as categorias de documentos"
-          onAdd={handleAdd}
-          onSearch={handleSearch}
-          onFilter={() => setIsFilterOpen(true)}
-          addButtonText="Nova Categoria"
+          actionButton={
+            <ModernButton onClick={handleAdd} size="sm" className="flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Nova Categoria
+            </ModernButton>
+          }
+          searchValue={searchValue}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Pesquisar categorias..."
+          filterFields={filterFields}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          departamentos={departamentos}
         />
 
         <DataTable
@@ -317,29 +246,14 @@ const CategoriasPage = () => {
           pagination={paginationProps}
         />
 
-        {/* Painel de Filtros */}
-        <FilterPanel
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          fields={filterFields}
-          onApply={handleApplyFilters}
-          onClear={handleClearFilters}
-          initialValues={activeFilters}
-        />
-
-        {/* Formulário Modal */}
         <FormModal
           isOpen={isFormOpen}
           onClose={handleFormClose}
           title={selectedCategoria ? 'Editar Categoria' : 'Nova Categoria'}
         >
-          <CategoriaForm
-            categoria={selectedCategoria}
-            onSuccess={handleFormSuccess}
-          />
+          <CategoriaForm categoria={selectedCategoria} onSuccess={handleFormSuccess} />
         </FormModal>
 
-        {/* Modal de Detalhes */}
         <CategoriaDetail
           isOpen={isDetailOpen}
           onClose={handleDetailClose}
