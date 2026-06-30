@@ -130,9 +130,6 @@ export class DocumentosService {
 
   // Criar novo documento
   static async criar(documento: DocumentoCreateData): Promise<ApiResponse<Documento>> {
-    console.log('🏗️ DocumentosService.criar chamado com:', documento);
-    console.log('👤 Responsável recebido:', documento.responsavel);
-    
     const formData = new FormData();
     
     // Adicionar dados do documento

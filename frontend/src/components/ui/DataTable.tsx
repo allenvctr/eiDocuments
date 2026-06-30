@@ -111,19 +111,19 @@ const DataTable = <T extends Record<string, any>>({
       key: 'view',
       label: 'Visualizar',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (record) => console.log('View', record),
+      onClick: () => {},
     },
     {
       key: 'edit',
       label: 'Editar',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (record) => console.log('Edit', record),
+      onClick: () => {},
     },
     {
       key: 'delete',
       label: 'Excluir',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (record) => console.log('Delete', record),
+      onClick: () => {},
       variant: 'danger' as const,
     },
   ];

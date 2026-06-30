@@ -44,13 +44,6 @@ const EditorDashboardPage = () => {
     refetch 
   } = useMyDepartmentStats();
 
-  // Debug
-  console.log('🔍 Editor Dashboard Debug:');
-  console.log('👤 User:', user);
-  console.log('📊 Stats:', stats);
-  console.log('⚠️ Error:', error);
-  console.log('⏳ Loading:', loading);
-
   // Documentos recentes do departamento
   const recentDocuments: Document[] = useMemo(() => {
     if (!stats?.documentos?.recentes) return [];

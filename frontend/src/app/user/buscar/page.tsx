@@ -254,9 +254,7 @@ const BuscarDocumentosPage = () => {
                   </p>
                 </div>
               }
-              onSort={(column, direction) => {
-                console.log('Ordenar por:', column, direction);
-              }}
+              onSort={() => {}}
             />
           </div>
         )}

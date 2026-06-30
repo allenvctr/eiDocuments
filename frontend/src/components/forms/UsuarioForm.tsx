@@ -174,7 +174,6 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({
         }
         await atualizar(usuario._id, updateData);
       } else {
-        console.log('📝 Dados sendo enviados para criação:', formData);
         await criar(formData);
       }
       
