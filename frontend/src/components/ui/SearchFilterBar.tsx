@@ -32,6 +32,8 @@ interface SearchFilterBarProps {
   showSearchButton?: boolean;
   // Called when the X (clear) button is clicked — use for non-live pages that need to reset state
   onClearSearch?: () => void;
+  // Whether the filter panel starts open (default true for manage pages, pass false for user pages)
+  defaultFiltersOpen?: boolean;
   // Filter fields config (passed by page, role-aware)
   filterFields: SearchFilterField[];
   // Current filter state
@@ -113,10 +115,11 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = (props) => {
     searchValue, onSearchChange, onSearch,
     searchPlaceholder = 'Pesquisar...',
     showSearchButton = false,
+    defaultFiltersOpen = true,
     filterFields, activeFilters, onFilterChange, onClearFilters,
   } = props;
 
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(defaultFiltersOpen);
 
   const chips = buildChips(filterFields, activeFilters, props);
   const activeCount = chips.length;

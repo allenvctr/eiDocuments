@@ -291,6 +291,7 @@ const MeusDocumentosPage = () => {
           onSearchChange={handleSearchChange}
           onSearch={handleSearch}
           searchPlaceholder="Pesquisar nos meus documentos..."
+          defaultFiltersOpen={false}
           filterFields={filterFields}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
