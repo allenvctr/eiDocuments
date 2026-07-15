@@ -112,6 +112,13 @@ const DocumentosPage = () => {
       } else {
         delete next[key];
       }
+      // Cascata departamento -> categoria -> tipo: limpar filtros dependentes
+      if (key === 'departamento') {
+        delete next.categoria;
+        delete next.tipo;
+      } else if (key === 'categoria') {
+        delete next.tipo;
+      }
       return next;
     });
     goToPage(1);
@@ -121,6 +128,28 @@ const DocumentosPage = () => {
     setActiveFilters({});
     goToPage(1);
   };
+
+  // Cascata departamento -> categoria -> tipo nas opções dos filtros
+  const categoriasFiltradas = useMemo(() => {
+    if (!activeFilters.departamento) return categorias;
+    return categorias.filter(c => {
+      const depId = typeof c.departamento === 'object' ? c.departamento?._id : c.departamento;
+      return depId === activeFilters.departamento;
+    });
+  }, [categorias, activeFilters.departamento]);
+
+  const tiposFiltrados = useMemo(() => {
+    const getCatId = (t: typeof tipos[number]) =>
+      typeof t.categoria === 'object' ? t.categoria?._id : t.categoria;
+    if (activeFilters.categoria) {
+      return tipos.filter(t => getCatId(t) === activeFilters.categoria);
+    }
+    if (activeFilters.departamento) {
+      const catIds = new Set(categoriasFiltradas.map(c => c._id));
+      return tipos.filter(t => catIds.has(getCatId(t)));
+    }
+    return tipos;
+  }, [tipos, categoriasFiltradas, activeFilters.categoria, activeFilters.departamento]);
 
   // Role-aware filter fields
   const filterFields: SearchFilterField[] = useMemo(() => {
@@ -348,8 +377,8 @@ const DocumentosPage = () => {
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
           departamentos={departamentos}
-          categorias={categorias}
-          tipos={tipos}
+          categorias={categoriasFiltradas}
+          tipos={tiposFiltrados}
           usuarios={usuarios}
         />
 

@@ -95,10 +95,24 @@ const MeusDocumentosPage = () => {
     setActiveFilters(prev => {
       const next = { ...prev };
       if (value) { next[key] = value; } else { delete next[key]; }
+      // Cascata categoria -> tipo: limpar tipo ao mudar a categoria
+      if (key === 'categoria') delete next.tipo;
       return next;
     });
     goToPage(1);
   };
+
+  // Cascata categoria -> tipo nas opções dos filtros
+  const tiposFiltrados = useMemo(() => {
+    const getCatId = (t: typeof tipos[number]) =>
+      typeof t.categoria === 'object' ? t.categoria?._id : t.categoria;
+    if (activeFilters.categoria) {
+      return tipos.filter(t => getCatId(t) === activeFilters.categoria);
+    }
+    if (!categorias.length) return tipos;
+    const catIds = new Set(categorias.map(c => c._id));
+    return tipos.filter(t => catIds.has(getCatId(t)));
+  }, [tipos, categorias, activeFilters.categoria]);
 
   const handleClearFilters = () => {
     setActiveFilters({});
@@ -296,7 +310,7 @@ const MeusDocumentosPage = () => {
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
           categorias={categorias}
-          tipos={tipos}
+          tipos={tiposFiltrados}
         />
 
         <DataTable
